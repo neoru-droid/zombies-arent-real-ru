@@ -1,0 +1,47 @@
+MIT License
+
+Copyright (c) 2026 neoru-droid
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software, localization data, and associated documentation files (the
+"Software"), to deal in the Software without restriction, including without
+limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom
+the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+================================================================================
+OPEN-SOURCE FONT NOTICES (SIL OPEN FONT LICENSE 1.1)
+================================================================================
+
+The font files located in `data/fonts/` (`Carlito.ttf` and `Tactical_HUD.ttf`)
+are distributed under the SIL Open Font License, Version 1.1
+(https://openfontlicense.org). Full license texts are provided alongside the
+font files in `Carlito-OFL.txt` and `Tactical_HUD-OFL.txt`.
+
+1. Carlito.ttf (8x8 Pixel Cyrillic & Latin Fallback Font)
+   Copyright (c) 2026 neoru-droid
+   An original 8x8 pixel-grid typeface created from scratch for Russian and
+   multilingual UI rendering. Distributed under the filename `Carlito.ttf`
+   strictly to satisfy the game engine's hardcoded Cyrillic fallback path
+   (`fonts/Carlito.ttf`), without incorporating glyphs or data from tyPoland's
+   Carlito typeface.
+   Licensed under the SIL Open Font License, Version 1.1.
+
+2. Tactical_HUD.ttf (Tactical HUD Regular, derived from Play)
+   Original Play typeface: Copyright (c) 2011, Jonas Hecksher, Playtypes,
+   e-types AS (lasse@e-types.com), with Reserved Font Name 'Play', 'Playtype',
+   'Playtype Sans'.
+   Vertical metrics adjusted and renamed to 'Tactical HUD' (`Tactical_HUD.ttf`)
+   in compliance with Section 3 of the SIL Open Font License.
+   Licensed under the SIL Open Font License, Version 1.1.

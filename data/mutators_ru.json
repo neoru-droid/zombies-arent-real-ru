@@ -1,0 +1,44 @@
+{
+  "from_the_edges.ini": {
+    "name_en": "From the Edges",
+    "name_ru": "С краёв карты",
+    "desc_en": "No outbreak erupts inside the map. The horde walks in from the map's edges instead, in waves, the first at READY.",
+    "desc_ru": "Внутри карты вспышка не начинается. Вместо этого орда заходит с краёв карты волнами, первая - по нажатию \"К БОЮ\"."
+  },
+  "inside_the_walls.ini": {
+    "name_en": "Inside the Walls",
+    "name_ru": "За стенами",
+    "desc_en": "Garrisons, snipers, mortars and Turrets may only be placed in buildings inside a safe zone. Every stage grants 10% more money.",
+    "desc_ru": "Гарнизоны, снайперы, миномёты и турели можно размещать только в зданиях внутри безопасных зон. Каждый этап даёт на 10% больше денег."
+  },
+  "landmark_city.ini": {
+    "name_en": "Landmark City",
+    "name_ru": "Город ориентиров",
+    "desc_en": "Twice as many special buildings: each square kilometre keeps up to 4 instead of 2. Every stage grants 35% less money.",
+    "desc_ru": "На карте вдвое чаще встречаются особые здания: до 4 на квадратный километр вместо 2. Каждый этап даёт на 35% меньше денег."
+  },
+  "no_safe_zones.ini": {
+    "name_en": "No Safe Zones",
+    "name_ru": "Без безопасных зон",
+    "desc_en": "No safe zones can be drawn on this map: hold the city with your guns, mines and walls alone. Every stage grants 25% more skill points.",
+    "desc_ru": "На этой карте нельзя размечать безопасные зоны: удерживайте город только орудиями, минами и стенами. Каждый этап даёт на 25% больше очков навыков."
+  },
+  "recharging_arsenal.ini": {
+    "name_en": "Recharging Arsenal",
+    "name_ru": "Восполняемый арсенал",
+    "desc_en": "Every unit you place in planning costs 40% more, but battle abilities recharge: a spent charge comes back after its cooldown.",
+    "desc_ru": "Каждая боевая единица при планировании стоит на 40% дороже, но боевые способности перезаряжаются: потраченный заряд возвращается после восстановления."
+  },
+  "swimmer_season.ini": {
+    "name_en": "Swimmer Season",
+    "name_ru": "Сезон пловцов",
+    "desc_en": "Mosh pits turn their zombies into swimmers three times as often, and swimmers cross water. Every stage grants 15% more money.",
+    "desc_ru": "Котлы орды превращают зомби в пловцов втрое чаще, а пловцы пересекают воду. Каждый этап даёт на 15% больше денег."
+  },
+  "tough_horde.ini": {
+    "name_en": "Tough Horde",
+    "name_ru": "Живучая орда",
+    "desc_en": "Zombies start the battle with 5 health instead of 1, and grow to 40 instead of 30. Every stage grants 35% more money.",
+    "desc_ru": "В начале боя у зомби 5 ед. здоровья вместо 1, а максимум вырастает до 40 вместо 30. Каждый этап даёт на 35% больше денег."
+  }
+}

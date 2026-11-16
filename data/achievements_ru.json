@@ -1,0 +1,142 @@
+[
+  {
+    "bit": 0,
+    "id": "ACH_NO_FRIENDLY_FIRE",
+    "name_en": "No Friendly Fire",
+    "desc_en": "Win a campaign without killing any civilians with your own weapons",
+    "name_ru": "Без огня по своим",
+    "desc_ru": "Пройдите кампанию, не убив ни одного мирного жителя своим оружием",
+    "icon_unlocked": "3319999214a75c8f06d837165ac1d2537e52735b.jpg",
+    "icon_locked": "9151fbf5a1eb1bd284315b5f7e02571ba8e2accb.jpg"
+  },
+  {
+    "bit": 1,
+    "id": "ACH_FRESH_CUT",
+    "name_en": "Freshly Cut",
+    "desc_en": "Win a scenario with a Diamond badge",
+    "name_ru": "Чистая огранка",
+    "desc_ru": "Пройдите уровень со значком «Алмаз»",
+    "icon_unlocked": "534ff3a3f0e572b324ace9456a3e5223fb16b926.jpg",
+    "icon_locked": "a1333d7332cd077d3f84593f12db9f6423de5fc3.jpg"
+  },
+  {
+    "bit": 2,
+    "id": "ACH_SPARKLY",
+    "name_en": "Sparkly",
+    "desc_en": "Complete a campaign with a Diamond badge on every stage",
+    "name_ru": "Бриллиантовый блеск",
+    "desc_ru": "Пройдите кампанию со значком «Алмаз» на каждом этапе",
+    "icon_unlocked": "ce20f09fbb914cf734617bce99268e884f073aca.jpg",
+    "icon_locked": "032d216991cadae91d0371d8cc791ba29fa9f432.jpg"
+  },
+  {
+    "bit": 3,
+    "id": "ACH_GOLDEN",
+    "name_en": "Golden",
+    "desc_en": "Win a scenario with a Gold badge (or better)",
+    "name_ru": "Золотая проба",
+    "desc_ru": "Пройдите уровень со значком «Золото» (или выше)",
+    "icon_unlocked": "5f327d6c6fc8c746ec40da6f12dca339cce51b0f.jpg",
+    "icon_locked": "0158009f75a8da43dd938e6a28d957687299e747.jpg"
+  },
+  {
+    "bit": 4,
+    "id": "ACH_GLITTERY",
+    "name_en": "Glittery",
+    "desc_en": "Complete a campaign with a Gold badge or better on every stage",
+    "name_ru": "Золотое сияние",
+    "desc_ru": "Пройдите кампанию со значком «Золото» или выше на каждом этапе",
+    "icon_unlocked": "92d90046211d73ab7c6ea656af747d2a79b29b40.jpg",
+    "icon_locked": "f738f026574eaee94887b854c14127443fed4557.jpg"
+  },
+  {
+    "bit": 5,
+    "id": "ACH_BEGINNERS_LUCK",
+    "name_en": "Beginner's Luck",
+    "desc_en": "Clear a scenario on the first attempt",
+    "name_ru": "Новичкам везёт",
+    "desc_ru": "Пройдите уровень с первой попытки",
+    "icon_unlocked": "a09d32c60c93d470e7f496656dd818cb487b6e5e.jpg",
+    "icon_locked": "2c317ad93238ae290e4baaafd0d70e5c3957ccf7.jpg"
+  },
+  {
+    "bit": 6,
+    "id": "ACH_CHOKE_POINT",
+    "name_en": "Choke Point",
+    "desc_en": "Destroy a bridge",
+    "name_ru": "Узкое горлышко",
+    "desc_ru": "Взорвите мост",
+    "icon_unlocked": "43b164433a0c220494f7200cb831dd984dc24921.jpg",
+    "icon_locked": "e31bd3b3f780c6c3e321565671b2805043035295.jpg"
+  },
+  {
+    "bit": 7,
+    "id": "ACH_AIR_SUPPORT",
+    "name_en": "Where's the Air Support!?",
+    "desc_en": "Call in a bomber airstrike",
+    "name_ru": "Где авиаподдержка?!",
+    "desc_ru": "Вызовите авиаудар бомбардировщика",
+    "icon_unlocked": "c79d9de11087eeed245167c22eda911ecc0c8ffc.jpg",
+    "icon_locked": "67c2def45ca996df4aa1784bc97c967c12cc695c.jpg"
+  },
+  {
+    "bit": 8,
+    "id": "ACH_GET_TO_THE_CHOPPA",
+    "name_en": "GET TO THE CHOPPA",
+    "desc_en": "Call in a helicopter",
+    "name_ru": "К ВЕРТОЛЁТУ!",
+    "desc_ru": "Вызовите вертолёт",
+    "icon_unlocked": "b32a4792763f10a54acf1d955b3fac1559ef4fb7.jpg",
+    "icon_locked": "c29c48131a926c276015ee49d53937d7a4371b92.jpg"
+  },
+  {
+    "bit": 9,
+    "id": "ACH_DARING",
+    "name_en": "Daring",
+    "desc_en": "Win a scenario without placing a safezone",
+    "name_ru": "Смельчак",
+    "desc_ru": "Пройдите уровень без безопасной зоны",
+    "icon_unlocked": "51bc8bb279794facd107425503de82832d35775e.jpg",
+    "icon_locked": "a831c51be475573ebc6ea0b10062a295a8f6b213.jpg"
+  },
+  {
+    "bit": 10,
+    "id": "ACH_FLAWLESS",
+    "name_en": "Flawless ",
+    "desc_en": "Beat a whole campaign without ever losing a scenario.  (Can be obtained after a loss by restarting from Scenario 1)",
+    "name_ru": "Без единой осечки",
+    "desc_ru": "Пройдите всю кампанию без единого поражения (при поражении можно начать заново с 1-го уровня)",
+    "icon_unlocked": "56d48b1285743434b12bcc8bdf64492364a52679.jpg",
+    "icon_locked": "ba9ab86cc6f5dea7c409f65f4582386873609eec.jpg"
+  },
+  {
+    "bit": 11,
+    "id": "ACH_MASTERFUL",
+    "name_en": "Masterful ",
+    "desc_en": "Beat a whole campaign, started fresh from scenario 1, without deploying any battle-phase abilities.",
+    "name_ru": "Мастер тактики",
+    "desc_ru": "Пройдите всю кампанию с 1-го уровня без боевых способностей",
+    "icon_unlocked": "feb7cde33924d3783b8d2eb1e7949a03c7e0444d.jpg",
+    "icon_locked": "65e6aba8360bb462901d7a9d190a8358d3d433a9.jpg"
+  },
+  {
+    "bit": 12,
+    "id": "ACH_COMPLETIONIST",
+    "name_en": "Completionist ",
+    "desc_en": "Beat every Campaign",
+    "name_ru": "Перфекционист",
+    "desc_ru": "Пройдите все кампании",
+    "icon_unlocked": "99b967576087607c883591d6abfcaccf092cbe16.jpg",
+    "icon_locked": "0612f135e24ca6affa183f6c90b0cc8b44847d52.jpg"
+  },
+  {
+    "bit": 13,
+    "id": "ACH_COMEBACK",
+    "name_en": "Back from the Brink",
+    "desc_en": "\"Beat a scenario after a safezone is breached",
+    "name_ru": "На волоске",
+    "desc_ru": "Пройдите уровень после прорыва безопасной зоны",
+    "icon_unlocked": "a14c332b4c1602186515e5b4ecb777ccab14a5a5.jpg",
+    "icon_locked": "956ef4e4b1ee298e944f75ae0b20345cc6f69704.jpg"
+  }
+]
