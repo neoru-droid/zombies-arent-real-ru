@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -12,6 +13,7 @@ using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -114,7 +116,7 @@ namespace ZombiesArentRealRuSetup
                 return 0;
             }
 
-            Application.Run(new SetupForm(payload, appBaseDir, cli.ExplicitGameDir, cli.ExplicitSteamDir));
+            Application.Run(new SetupForm(payload, appBaseDir, cli.ExplicitGameDir, cli.ExplicitSteamDir, cli.Mode));
             return 0;
         }
 
@@ -153,6 +155,11 @@ namespace ZombiesArentRealRuSetup
                     InstallerService.Uninstall(gameDir, steamDir, Console.WriteLine);
                     return 0;
                 }
+                return 1;
+            }
+            catch (UnauthorizedAccessException uaEx)
+            {
+                Console.Error.WriteLine("ОШИБКА: Отказано в доступе к файлам игры (" + uaEx.Message + "). Запустите установщик или терминал от имени администратора.");
                 return 1;
             }
             catch (Exception ex)
@@ -281,6 +288,8 @@ namespace ZombiesArentRealRuSetup
     internal enum CliMode
     {
         DefaultGui,
+        UacInstallGui,
+        UacUninstallGui,
         AchievementsGui,
         Status,
         Install,
@@ -324,6 +333,16 @@ namespace ZombiesArentRealRuSetup
                 else if (EqualsFlag(arg, "--uninstall") || EqualsFlag(arg, "--restore"))
                 {
                     parsed.Mode = CliMode.Uninstall;
+                    modeCount++;
+                }
+                else if (EqualsFlag(arg, "--uac-install"))
+                {
+                    parsed.Mode = CliMode.UacInstallGui;
+                    modeCount++;
+                }
+                else if (EqualsFlag(arg, "--uac-uninstall"))
+                {
+                    parsed.Mode = CliMode.UacUninstallGui;
                     modeCount++;
                 }
                 else if (EqualsFlag(arg, "--achievements"))
@@ -627,6 +646,7 @@ namespace ZombiesArentRealRuSetup
             AddRegistrySteamCandidates(candidates);
             candidates.Add(@"C:\Program Files (x86)\Steam");
             candidates.Add(@"C:\Program Files\Steam");
+            AddProtonSteamCandidates(candidates);
 
             if (!string.IsNullOrWhiteSpace(hintGameDir))
             {
@@ -646,8 +666,9 @@ namespace ZombiesArentRealRuSetup
                 {
                     string statsDir = Path.Combine(cand, @"appcache\stats");
                     string steamExe = Path.Combine(cand, "steam.exe");
+                    string steamSh = Path.Combine(cand, "steam.sh");
                     string vdf = Path.Combine(cand, @"steamapps\libraryfolders.vdf");
-                    if (SafeDirectoryExists(statsDir) || SafeFileExists(steamExe) || SafeFileExists(vdf))
+                    if (SafeDirectoryExists(statsDir) || SafeFileExists(steamExe) || SafeFileExists(steamSh) || SafeFileExists(vdf))
                     {
                         return SafeFullPath(cand);
                     }
@@ -695,6 +716,7 @@ namespace ZombiesArentRealRuSetup
 
             AddLibraryCandidates(candidates, @"C:\Program Files (x86)\Steam");
             AddVdfLibraryCandidates(candidates, @"C:\Program Files (x86)\Steam\steamapps\libraryfolders.vdf");
+            AddProtonLibraryCandidates(candidates);
 
             List<string> driveRoots = GetSafeLocalDriveRoots();
             for (int i = 0; i < driveRoots.Count; i++)
@@ -861,6 +883,80 @@ namespace ZombiesArentRealRuSetup
             }
         }
 
+        private static void AddProtonSteamCandidates(List<string> list)
+        {
+            list.Add(@"Z:\home\deck\.local\share\Steam");
+            list.Add(@"Z:\home\deck\.steam\steam");
+            list.Add(@"Z:\home\deck\.steam\root");
+            list.Add(@"Z:\home\deck\.var\app\com.valvesoftware.Steam\.local\share\Steam");
+
+            try
+            {
+                if (SafeDirectoryExists(@"Z:\home"))
+                {
+                    string[] users = Directory.GetDirectories(@"Z:\home");
+                    for (int i = 0; i < users.Length; i++)
+                    {
+                        list.Add(Path.Combine(users[i], @".local\share\Steam"));
+                        list.Add(Path.Combine(users[i], @".steam\steam"));
+                        list.Add(Path.Combine(users[i], @".var\app\com.valvesoftware.Steam\.local\share\Steam"));
+                    }
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        private static void AddProtonLibraryCandidates(List<string> candidates)
+        {
+            List<string> protonRoots = new List<string>();
+            AddProtonSteamCandidates(protonRoots);
+            for (int i = 0; i < protonRoots.Count; i++)
+            {
+                AddLibraryCandidates(candidates, protonRoots[i]);
+                AddVdfLibraryCandidates(candidates, Path.Combine(protonRoots[i], @"steamapps\libraryfolders.vdf"));
+            }
+
+            string[] sdRoots = new string[]
+            {
+                @"Z:\run\media\mmcblk0p1",
+                @"Z:\run\media\mmcblk0p1\SteamLibrary"
+            };
+            for (int i = 0; i < sdRoots.Length; i++)
+            {
+                AddLibraryCandidates(candidates, sdRoots[i]);
+            }
+
+            try
+            {
+                if (SafeDirectoryExists(@"Z:\run\media"))
+                {
+                    string[] mediaEntries = Directory.GetDirectories(@"Z:\run\media");
+                    for (int i = 0; i < mediaEntries.Length; i++)
+                    {
+                        AddLibraryCandidates(candidates, mediaEntries[i]);
+                        AddLibraryCandidates(candidates, Path.Combine(mediaEntries[i], "SteamLibrary"));
+                        try
+                        {
+                            string[] subMounts = Directory.GetDirectories(mediaEntries[i]);
+                            for (int j = 0; j < subMounts.Length; j++)
+                            {
+                                AddLibraryCandidates(candidates, subMounts[j]);
+                                AddLibraryCandidates(candidates, Path.Combine(subMounts[j], "SteamLibrary"));
+                            }
+                        }
+                        catch
+                        {
+                        }
+                    }
+                }
+            }
+            catch
+            {
+            }
+        }
+
         private static void AddVdfLibraryCandidates(List<string> candidates, string vdfPath)
         {
             if (!SafeFileExists(vdfPath))
@@ -873,8 +969,14 @@ namespace ZombiesArentRealRuSetup
                 MatchCollection matches = Regex.Matches(text, "\"path\"\\s+\"([^\"]+)\"", RegexOptions.CultureInvariant);
                 foreach (Match match in matches)
                 {
-                    string libRoot = Program.SafeTrimTrailingSlash(match.Groups[1].Value.Replace("\\\\", "\\"));
+                    string rawVal = match.Groups[1].Value;
+                    string libRoot = Program.SafeTrimTrailingSlash(rawVal.Replace("\\\\", "\\"));
                     AddLibraryCandidates(candidates, libRoot);
+                    if (rawVal.StartsWith("/", StringComparison.Ordinal))
+                    {
+                        string protonLib = @"Z:" + Program.SafeTrimTrailingSlash(rawVal.Replace('/', '\\'));
+                        AddLibraryCandidates(candidates, protonLib);
+                    }
                 }
             }
             catch
@@ -1988,8 +2090,8 @@ namespace ZombiesArentRealRuSetup
                     }
                     BackupFileRecord rec = new BackupFileRecord();
                     rec.TargetKind = ReadString(d, "target_kind", "game");
-                    rec.RelPath = ReadString(d, "rel_path", string.Empty);
-                    rec.BackupRelPath = ReadString(d, "backup_rel_path", string.Empty);
+                    rec.RelPath = ReadString(d, "rel_path", string.Empty).Replace('/', '\\');
+                    rec.BackupRelPath = ReadString(d, "backup_rel_path", string.Empty).Replace('/', '\\');
                     rec.OrigSha256 = ReadString(d, "orig_sha256", string.Empty);
                     rec.PatchedSha256 = ReadString(d, "patched_sha256", string.Empty);
                     rec.ExistedOriginally = ReadBool(d, "existed_originally", true);
@@ -2158,6 +2260,193 @@ namespace ZombiesArentRealRuSetup
         }
     }
 
+    internal static class ElevationHelper
+    {
+        public static bool IsProcessElevated()
+        {
+            try
+            {
+                using (WindowsIdentity id = WindowsIdentity.GetCurrent())
+                {
+                    if (id == null)
+                    {
+                        return false;
+                    }
+                    WindowsPrincipal principal = new WindowsPrincipal(id);
+                    return principal.IsInRole(WindowsBuiltInRole.Administrator);
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public static bool NeedsElevationForGameDir(string gameDir)
+        {
+            if (string.IsNullOrWhiteSpace(gameDir) || IsProcessElevated())
+            {
+                return false;
+            }
+            if (!CanProbeDirectoryWrite(gameDir))
+            {
+                return true;
+            }
+            string fontsDir = Path.Combine(gameDir, "fonts");
+            if (SteamLocator.SafeDirectoryExists(fontsDir) && !CanProbeDirectoryWrite(fontsDir))
+            {
+                return true;
+            }
+            string ruLangPath = Path.Combine(gameDir, @"lang\ru.lang");
+            if (SteamLocator.SafeFileExists(ruLangPath) && !CanOpenExistingFileForWrite(ruLangPath))
+            {
+                return true;
+            }
+            return false;
+        }
+
+        public static bool NeedsElevationForTargetFile(string filePath)
+        {
+            if (string.IsNullOrWhiteSpace(filePath) || IsProcessElevated())
+            {
+                return false;
+            }
+            string parentDir = Path.GetDirectoryName(filePath);
+            if (!string.IsNullOrEmpty(parentDir) && SteamLocator.SafeDirectoryExists(parentDir))
+            {
+                if (!CanProbeDirectoryWrite(parentDir))
+                {
+                    return true;
+                }
+            }
+            if (SteamLocator.SafeFileExists(filePath) && !CanOpenExistingFileForWrite(filePath))
+            {
+                return true;
+            }
+            return false;
+        }
+
+        public static string BuildUacArguments(string modeFlag, string gameDir, string steamDir)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append(modeFlag);
+            if (!string.IsNullOrWhiteSpace(gameDir))
+            {
+                sb.Append(" --game-dir ");
+                sb.Append(QuoteCliValue(gameDir));
+            }
+            if (!string.IsNullOrWhiteSpace(steamDir))
+            {
+                sb.Append(" --steam-dir ");
+                sb.Append(QuoteCliValue(steamDir));
+            }
+            return sb.ToString();
+        }
+
+        public static bool TryRelaunchElevated(
+            string modeFlag,
+            string gameDir,
+            string steamDir,
+            out bool cancelledByUser,
+            out string errorMessage)
+        {
+            cancelledByUser = false;
+            errorMessage = null;
+            try
+            {
+                ProcessStartInfo psi = new ProcessStartInfo();
+                psi.FileName = Application.ExecutablePath;
+                psi.Arguments = BuildUacArguments(modeFlag, gameDir, steamDir);
+                psi.Verb = "runas";
+                psi.UseShellExecute = true;
+                Process proc = Process.Start(psi);
+                return proc != null;
+            }
+            catch (Win32Exception wex)
+            {
+                if (wex.NativeErrorCode == 1223)
+                {
+                    cancelledByUser = true;
+                    return false;
+                }
+                errorMessage = wex.Message;
+                return false;
+            }
+            catch (Exception ex)
+            {
+                errorMessage = ex.Message;
+                return false;
+            }
+        }
+
+        private static string QuoteCliValue(string raw)
+        {
+            string clean = Program.SafeTrimTrailingSlash((raw ?? string.Empty).Trim().Trim('"'));
+            if (clean.EndsWith(@"\", StringComparison.Ordinal))
+            {
+                clean += @"\";
+            }
+            return "\"" + clean.Replace("\"", "\\\"") + "\"";
+        }
+
+        private static bool CanProbeDirectoryWrite(string dirPath)
+        {
+            string probePath = Path.Combine(dirPath, ".zar_uac_probe_" + Guid.NewGuid().ToString("N") + ".tmp");
+            try
+            {
+                using (FileStream fs = new FileStream(probePath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                {
+                }
+                return true;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return false;
+            }
+            catch
+            {
+                return true;
+            }
+            finally
+            {
+                try
+                {
+                    if (File.Exists(probePath))
+                    {
+                        File.Delete(probePath);
+                    }
+                }
+                catch
+                {
+                }
+            }
+        }
+
+        private static bool CanOpenExistingFileForWrite(string filePath)
+        {
+            try
+            {
+                FileAttributes attrs = File.GetAttributes(filePath);
+                if ((attrs & FileAttributes.ReadOnly) != 0)
+                {
+                    return true;
+                }
+                using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite))
+                {
+                }
+                return true;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return false;
+            }
+            catch
+            {
+                return true;
+            }
+        }
+    }
+
     internal static class InstallerService
     {
         private static readonly string[] ManagedOriginalFonts = new string[]
@@ -2241,6 +2530,13 @@ namespace ZombiesArentRealRuSetup
 
         public static void Install(PayloadData payload, string gameDir, string steamDir, Action<string> log)
         {
+            string ignoredSkippedSchema;
+            Install(payload, gameDir, steamDir, log, out ignoredSkippedSchema);
+        }
+
+        public static void Install(PayloadData payload, string gameDir, string steamDir, Action<string> log, out string skippedSchemaPath)
+        {
+            skippedSchemaPath = null;
             if (log == null)
             {
                 log = delegate { };
@@ -2406,16 +2702,33 @@ namespace ZombiesArentRealRuSetup
 
                 if (!string.IsNullOrEmpty(schemaPath) && SteamLocator.SafeFileExists(schemaPath))
                 {
+                    BackupFileRecord prevSchemaRec = FindRecord(existingManifest, "steam_schema", SteamLocator.SchemaFileName);
                     BackupFileRecord schemaRec = EnsureSteamSchemaBackedUp(schemaPath, backupRoot, existingManifest, log);
                     byte[] cleanSchemaBytes = File.ReadAllBytes(Path.Combine(backupRoot, schemaRec.BackupRelPath));
                     int achPatched;
                     byte[] patchedSchema = ValveKvCodec.PatchAchievementSchema(cleanSchemaBytes, payload.Achievements, out achPatched);
-                    WriteAtomicTarget(stagingRoot, @"steam_stats\" + SteamLocator.SchemaFileName, schemaPath, patchedSchema);
-
-                    schemaRec.PatchedSha256 = BackupManifestStore.ComputeSha256Hex(patchedSchema);
-                    nextManifest.SteamSchemaSourcePath = schemaPath;
-                    nextManifest.Files.Add(schemaRec);
-                    log(string.Format(CultureInfo.InvariantCulture, "Обновлена схема достижений Steam: {0} из {1} на русском языке.", achPatched, payload.Achievements.Count));
+                    try
+                    {
+                        WriteAtomicTarget(stagingRoot, @"steam_stats\" + SteamLocator.SchemaFileName, schemaPath, patchedSchema);
+                        schemaRec.PatchedSha256 = BackupManifestStore.ComputeSha256Hex(patchedSchema);
+                        nextManifest.SteamSchemaSourcePath = schemaPath;
+                        nextManifest.Files.Add(schemaRec);
+                        log(string.Format(CultureInfo.InvariantCulture, "Обновлена схема достижений Steam: {0} из {1} на русском языке.", achPatched, payload.Achievements.Count));
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        skippedSchemaPath = schemaPath;
+                        if (prevSchemaRec != null)
+                        {
+                            nextManifest.SteamSchemaSourcePath = existingManifest.SteamSchemaSourcePath ?? schemaPath;
+                            nextManifest.Files.Add(prevSchemaRec);
+                        }
+                        else
+                        {
+                            TryDeleteFile(Path.Combine(backupRoot, schemaRec.BackupRelPath));
+                        }
+                        log("Примечание: нет прав записи в папку Steam (" + schemaPath + "). Текст и шрифты игры установлены полностью; для перевода всплывающих достижений в Steam запустите установщик от имени администратора.");
+                    }
                 }
                 else
                 {
@@ -2435,6 +2748,13 @@ namespace ZombiesArentRealRuSetup
 
         public static void Uninstall(string gameDir, string steamDir, Action<string> log)
         {
+            string ignoredSkippedSchema;
+            Uninstall(gameDir, steamDir, log, out ignoredSkippedSchema);
+        }
+
+        public static void Uninstall(string gameDir, string steamDir, Action<string> log, out string skippedSchemaPath)
+        {
+            skippedSchemaPath = null;
             if (log == null)
             {
                 log = delegate { };
@@ -2500,9 +2820,17 @@ namespace ZombiesArentRealRuSetup
                             {
                                 byte[] origSchema = File.ReadAllBytes(backupSchemaPath);
                                 VerifyExpectedHash(SteamLocator.SchemaFileName, origSchema, rec.OrigSha256);
-                                WriteAtomicTarget(stagingRoot, rec.BackupRelPath, schemaTarget, origSchema);
-                                VerifyExpectedHash(SteamLocator.SchemaFileName, File.ReadAllBytes(schemaTarget), rec.OrigSha256);
-                                log("Восстановлена оригинальная схема достижений Steam.");
+                                try
+                                {
+                                    WriteAtomicTarget(stagingRoot, rec.BackupRelPath, schemaTarget, origSchema);
+                                    VerifyExpectedHash(SteamLocator.SchemaFileName, File.ReadAllBytes(schemaTarget), rec.OrigSha256);
+                                    log("Восстановлена оригинальная схема достижений Steam.");
+                                }
+                                catch (UnauthorizedAccessException)
+                                {
+                                    skippedSchemaPath = schemaTarget;
+                                    log("Примечание: нет прав записи в папку Steam (" + schemaTarget + "). Оригинальные файлы самой игры полностью восстановлены.");
+                                }
                             }
                         }
                     }
@@ -3261,10 +3589,12 @@ namespace ZombiesArentRealRuSetup
     {
         private readonly PayloadData _payload;
         private readonly string _appBaseDir;
+        private readonly CliMode _launchMode;
         private readonly float _scale;
 
         private string _steamDir;
         private bool _isBusy;
+        private bool _uacAutoTriggered;
 
         private string _statusBadgeText = string.Empty;
         private Color _statusBadgeFg = TacticalTheme.TextSecondary;
@@ -3297,10 +3627,16 @@ namespace ZombiesArentRealRuSetup
         private TacticalButton _supportLinkBtn;
         private TacticalButton _githubLinkBtn;
 
-        public SetupForm(PayloadData payload, string appBaseDir, string explicitGameDir, string explicitSteamDir)
+        public SetupForm(
+            PayloadData payload,
+            string appBaseDir,
+            string explicitGameDir,
+            string explicitSteamDir,
+            CliMode launchMode = CliMode.DefaultGui)
         {
             _payload = payload;
             _appBaseDir = appBaseDir;
+            _launchMode = launchMode;
 
             SetStyle(
                 ControlStyles.AllPaintingInWmPaint
@@ -3342,6 +3678,19 @@ namespace ZombiesArentRealRuSetup
         {
             base.OnShown(e);
             TacticalTheme.EnsureWithinWorkingArea(this, S(12), false);
+
+            if (!_uacAutoTriggered)
+            {
+                _uacAutoTriggered = true;
+                if (_launchMode == CliMode.UacInstallGui)
+                {
+                    BeginInvoke((MethodInvoker)delegate { StartInstallFlow(true); });
+                }
+                else if (_launchMode == CliMode.UacUninstallGui)
+                {
+                    BeginInvoke((MethodInvoker)delegate { StartUninstallFlow(true); });
+                }
+            }
         }
 
         private int S(int px)
@@ -3590,19 +3939,15 @@ namespace ZombiesArentRealRuSetup
 
         private void OnInstallClicked(object sender, EventArgs e)
         {
-            if (_isBusy)
-            {
-                return;
-            }
-            string gameDir = SteamLocator.NormalizePickedGameDirectory(_pathBox.Text);
-            string steamDir = _steamDir;
-            RunWorkerAction("Установка русификатора...", delegate(Action<string> logger)
-            {
-                InstallerService.Install(_payload, gameDir, steamDir, logger);
-            });
+            StartInstallFlow(_launchMode == CliMode.UacInstallGui);
         }
 
         private void OnUninstallClicked(object sender, EventArgs e)
+        {
+            StartUninstallFlow(_launchMode == CliMode.UacUninstallGui);
+        }
+
+        private void StartInstallFlow(bool skipUacRelaunch)
         {
             if (_isBusy)
             {
@@ -3610,10 +3955,168 @@ namespace ZombiesArentRealRuSetup
             }
             string gameDir = SteamLocator.NormalizePickedGameDirectory(_pathBox.Text);
             string steamDir = _steamDir;
-            RunWorkerAction("Возврат оригинальных файлов...", delegate(Action<string> logger)
+            if (!CheckReadyBeforeAction(gameDir))
             {
-                InstallerService.Uninstall(gameDir, steamDir, logger);
-            });
+                return;
+            }
+            if (!skipUacRelaunch && ElevationHelper.NeedsElevationForGameDir(gameDir))
+            {
+                TryElevateAndClose("--uac-install", gameDir, steamDir);
+                return;
+            }
+
+            string skippedSchema = null;
+            RunWorkerAction(
+                "Установка русификатора...",
+                delegate(Action<string> logger)
+                {
+                    InstallerService.Install(_payload, gameDir, steamDir, logger, out skippedSchema);
+                },
+                delegate(Exception failure)
+                {
+                    HandleWorkerFinished(failure, skippedSchema, true, skipUacRelaunch, gameDir, steamDir);
+                });
+        }
+
+        private void StartUninstallFlow(bool skipUacRelaunch)
+        {
+            if (_isBusy)
+            {
+                return;
+            }
+            string gameDir = SteamLocator.NormalizePickedGameDirectory(_pathBox.Text);
+            string steamDir = _steamDir;
+            if (!CheckReadyBeforeAction(gameDir))
+            {
+                return;
+            }
+            if (!skipUacRelaunch && (ElevationHelper.NeedsElevationForGameDir(gameDir) || NeedsSchemaElevationForUninstall(gameDir, steamDir)))
+            {
+                TryElevateAndClose("--uac-uninstall", gameDir, steamDir);
+                return;
+            }
+
+            string skippedSchema = null;
+            RunWorkerAction(
+                "Возврат оригинальных файлов...",
+                delegate(Action<string> logger)
+                {
+                    InstallerService.Uninstall(gameDir, steamDir, logger, out skippedSchema);
+                },
+                delegate(Exception failure)
+                {
+                    HandleWorkerFinished(failure, skippedSchema, false, skipUacRelaunch, gameDir, steamDir);
+                });
+        }
+
+        private bool CheckReadyBeforeAction(string gameDir)
+        {
+            if (!SteamLocator.IsValidGameDirectory(gameDir))
+            {
+                string msg = "Папка игры не содержит zombies-arent-real.exe и lang\\en.lang: " + gameDir;
+                AppendLog("ОШИБКА: " + msg);
+                MessageBox.Show(this, msg, "Папка игры не найдена", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+            try
+            {
+                SteamLocator.AssertGameClosed(gameDir);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                AppendLog("ОШИБКА: " + ex.Message);
+                MessageBox.Show(this, ex.Message, "Игра запущена", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+        }
+
+        private static bool NeedsSchemaElevationForUninstall(string gameDir, string steamDir)
+        {
+            try
+            {
+                string manifestPath = BackupManifestStore.GetManifestPath(gameDir);
+                if (!SteamLocator.SafeFileExists(manifestPath))
+                {
+                    return false;
+                }
+                BackupManifestData m = BackupManifestStore.Load(manifestPath);
+                for (int i = 0; i < m.Files.Count; i++)
+                {
+                    if (string.Equals(m.Files[i].TargetKind, "steam_schema", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string statsDir = SteamLocator.ResolveSteamStatsDirectory(steamDir);
+                        string target = !string.IsNullOrEmpty(statsDir)
+                            ? Path.Combine(statsDir, SteamLocator.SchemaFileName)
+                            : m.SteamSchemaSourcePath;
+                        return ElevationHelper.NeedsElevationForTargetFile(target);
+                    }
+                }
+            }
+            catch
+            {
+            }
+            return false;
+        }
+
+        private bool TryElevateAndClose(string modeFlag, string gameDir, string steamDir)
+        {
+            AppendLog("Запрос прав администратора Windows (UAC)...");
+            bool cancelled;
+            string errorMsg;
+            if (ElevationHelper.TryRelaunchElevated(modeFlag, gameDir, steamDir, out cancelled, out errorMsg))
+            {
+                Close();
+                return true;
+            }
+            if (cancelled)
+            {
+                AppendLog("Запрос прав администратора отменён пользователем.");
+            }
+            else if (!string.IsNullOrEmpty(errorMsg))
+            {
+                AppendLog("Не удалось запустить с правами администратора: " + errorMsg);
+                MessageBox.Show(this, errorMsg, "Ошибка UAC", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            RefreshUiState();
+            return false;
+        }
+
+        private void HandleWorkerFinished(
+            Exception failure,
+            string skippedSchema,
+            bool isInstall,
+            bool skipUacRelaunch,
+            string gameDir,
+            string steamDir)
+        {
+            string uacFlag = isInstall ? "--uac-install" : "--uac-uninstall";
+            if (failure is UnauthorizedAccessException && !skipUacRelaunch && !ElevationHelper.IsProcessElevated())
+            {
+                TryElevateAndClose(uacFlag, gameDir, steamDir);
+                return;
+            }
+            if (failure != null)
+            {
+                AppendLog("ОШИБКА: " + failure.Message);
+                MessageBox.Show(this, failure.Message, "Ошибка операции", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            if (isInstall && !string.IsNullOrEmpty(skippedSchema) && !skipUacRelaunch && !ElevationHelper.IsProcessElevated())
+            {
+                DialogResult ask = MessageBox.Show(
+                    this,
+                    "Текст и шрифты игры установлены полностью!\n\nПапка клиента Steam защищена от записи:\n"
+                        + skippedSchema
+                        + "\n\nПерезапустить установщик от имени администратора, чтобы перевести всплывающие достижения в самом Steam?",
+                    "Перевод достижений Steam",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question);
+                if (ask == DialogResult.Yes)
+                {
+                    TryElevateAndClose("--uac-install", gameDir, steamDir);
+                }
+            }
         }
 
         private void OnAchievementsClicked(object sender, EventArgs e)
@@ -3625,7 +4128,7 @@ namespace ZombiesArentRealRuSetup
             RefreshUiState();
         }
 
-        private void RunWorkerAction(string startHeader, Action<Action<string>> work)
+        private void RunWorkerAction(string startHeader, Action<Action<string>> work, Action<Exception> onCompleted)
         {
             _isBusy = true;
             RefreshUiState();
@@ -3650,12 +4153,11 @@ namespace ZombiesArentRealRuSetup
                 SafeInvoke(delegate
                 {
                     _isBusy = false;
-                    if (failure != null)
-                    {
-                        AppendLog("ОШИБКА: " + failure.Message);
-                        MessageBox.Show(this, failure.Message, "Ошибка операции", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
                     RefreshUiState();
+                    if (onCompleted != null)
+                    {
+                        onCompleted(failure);
+                    }
                 });
             });
         }
