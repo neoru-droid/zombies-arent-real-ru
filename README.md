@@ -4,7 +4,7 @@
 
 Исправленный русский перевод, пиксельный шрифт 8x8 (плюс гладкий **Tactical HUD** в настройках экрана) и перевод достижений для **Zombies Aren't Real**.
 
-**[Скачать ZombiesArentReal-RU-v1.1.zip](https://github.com/neoru-droid/zombies-arent-real-ru/releases/latest)**
+**[Скачать ZombiesArentReal-RU-v1.1.zip](https://github.com/neoru-droid/zombies-arent-real-ru/releases/latest)** *(актуально для патча `v0.43.1`)*
 
 ## Установка
 1. Закройте игру, распакуйте архив и запустите `ZombiesArentReal-RU-Setup.exe` -> **«Установить русификатор»**.
