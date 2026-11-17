@@ -30,8 +30,8 @@ using Microsoft.Win32;
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: AssemblyVersion("1.1.0.0")]
+[assembly: AssemblyFileVersion("1.1.0.0")]
 
 namespace ZombiesArentRealRuSetup
 {
@@ -39,6 +39,7 @@ namespace ZombiesArentRealRuSetup
     {
         public const int TargetAppId = 5185890;
         public const string SupportUrl = "https://pay.cloudtips.ru/p/240b8760";
+        public const string BoostyUrl = "https://boosty.to/cd_tixo";
         public const string GithubUrl = "https://github.com/neoru-droid/zombies-arent-real-ru";
 
         private const int AttachParentProcess = -1;
@@ -270,7 +271,7 @@ namespace ZombiesArentRealRuSetup
 
         private static void PrintCliHelp()
         {
-            Console.WriteLine("Zombies Aren't Real — Русификатор v1.0 (neoru-droid)");
+            Console.WriteLine("Zombies Aren't Real — Русификатор v1.1 (neoru-droid)");
             Console.WriteLine();
             Console.WriteLine("Использование:");
             Console.WriteLine("  ZombiesArentReal-RU-Setup.exe                        Графическое окно установщика");
@@ -468,7 +469,7 @@ namespace ZombiesArentRealRuSetup
             }
 
             PayloadData data = new PayloadData();
-            data.Version = GetString(root, "version", "1.0.0");
+            data.Version = GetString(root, "version", "1.1.0");
             data.AppId = GetInt(root, "app_id", Program.TargetAppId);
             data.Lang = ParseLangMap(root);
             data.Achievements = ParseAchievementsList(root);
@@ -2010,7 +2011,7 @@ namespace ZombiesArentRealRuSetup
     internal sealed class BackupManifestData
     {
         public int ManifestVersion = 1;
-        public string InstallerVersion = "1.0.0";
+        public string InstallerVersion = "1.1.0";
         public int AppId = Program.TargetAppId;
         public string CreatedUtc;
         public string UpdatedUtc;
@@ -2070,7 +2071,7 @@ namespace ZombiesArentRealRuSetup
 
             BackupManifestData m = new BackupManifestData();
             m.ManifestVersion = ReadInt(root, "manifest_version", 1);
-            m.InstallerVersion = ReadString(root, "installer_version", "1.0.0");
+            m.InstallerVersion = ReadString(root, "installer_version", "1.1.0");
             m.AppId = ReadInt(root, "app_id", Program.TargetAppId);
             m.CreatedUtc = ReadString(root, "created_utc", string.Empty);
             m.UpdatedUtc = ReadString(root, "updated_utc", string.Empty);
@@ -2578,7 +2579,7 @@ namespace ZombiesArentRealRuSetup
             }
 
             BackupManifestData nextManifest = new BackupManifestData();
-            nextManifest.InstallerVersion = payload.Version ?? "1.0.0";
+            nextManifest.InstallerVersion = payload.Version ?? "1.1.0";
             nextManifest.AppId = payload.AppId;
             nextManifest.CreatedUtc = (existingManifest != null && !string.IsNullOrEmpty(existingManifest.CreatedUtc))
                 ? existingManifest.CreatedUtc
@@ -3600,7 +3601,6 @@ namespace ZombiesArentRealRuSetup
         private Color _statusBadgeFg = TacticalTheme.TextSecondary;
         private Color _statusBadgeBg = TacticalTheme.RecessedBg;
         private Color _statusBadgeBorder = TacticalTheme.BorderCrisp;
-        private int _unlockedCount;
 
         private Font _fontBrand;
         private Font _fontBadge;
@@ -3622,9 +3622,9 @@ namespace ZombiesArentRealRuSetup
         private TacticalButton _browseBtn;
         private TacticalButton _installBtn;
         private TacticalButton _uninstallBtn;
-        private TacticalButton _achievementsBtn;
         private TextBox _logBox;
         private TacticalButton _supportLinkBtn;
+        private TacticalButton _boostyLinkBtn;
         private TacticalButton _githubLinkBtn;
 
         public SetupForm(
@@ -3653,7 +3653,7 @@ namespace ZombiesArentRealRuSetup
             StartPosition = FormStartPosition.CenterScreen;
             BackColor = TacticalTheme.BgDeep;
             ForeColor = TacticalTheme.TextPrimary;
-            Text = "Zombies Aren't Real — Русификатор v1.0";
+            Text = "Zombies Aren't Real — Русификатор v1.1";
             ClientSize = new Size(S(728), S(414));
 
             _winIcon = TacticalTheme.CreateWindowIcon();
@@ -3768,10 +3768,9 @@ namespace ZombiesArentRealRuSetup
 
             int btnY = S(206);
             int btnH = S(44);
-            int gap = S(10);
-            int installW = S(258);
-            int restoreW = S(196);
-            int achW = contentW - installW - restoreW - gap * 2;
+            int gap = S(12);
+            int restoreW = S(240);
+            int installW = contentW - restoreW - gap;
 
             _installBtn = new TacticalButton();
             _installBtn.Text = "Установить русификатор";
@@ -3790,14 +3789,6 @@ namespace ZombiesArentRealRuSetup
             _uninstallBtn.Click += OnUninstallClicked;
             Controls.Add(_uninstallBtn);
 
-            _achievementsBtn = new TacticalButton();
-            _achievementsBtn.Text = "Достижения (0 / 14)";
-            _achievementsBtn.Font = _fontSecondaryBtn;
-            _achievementsBtn.CornerRadius = S(6);
-            _achievementsBtn.Bounds = new Rectangle(pad + installW + gap + restoreW + gap, btnY, achW, btnH);
-            _achievementsBtn.Click += OnAchievementsClicked;
-            Controls.Add(_achievementsBtn);
-
             _logCardRect = new Rectangle(pad, S(264), contentW, S(96));
             _logBox = new TextBox();
             _logBox.Multiline = true;
@@ -3813,8 +3804,9 @@ namespace ZombiesArentRealRuSetup
 
             int footerY = S(372);
             int footerH = S(28);
-            int ghW = S(96);
-            int supW = S(178);
+            int ghW = S(88);
+            int boostyW = S(88);
+            int supW = S(168);
 
             _githubLinkBtn = new TacticalButton();
             _githubLinkBtn.Text = "GitHub";
@@ -3825,12 +3817,21 @@ namespace ZombiesArentRealRuSetup
             _githubLinkBtn.Click += delegate { Program.OpenBrowserUrl(Program.GithubUrl); };
             Controls.Add(_githubLinkBtn);
 
+            _boostyLinkBtn = new TacticalButton();
+            _boostyLinkBtn.Text = "Boosty";
+            _boostyLinkBtn.Font = _fontSmall;
+            _boostyLinkBtn.IsSubtleLink = true;
+            _boostyLinkBtn.CornerRadius = S(5);
+            _boostyLinkBtn.Bounds = new Rectangle(ClientSize.Width - pad - ghW - S(8) - boostyW, footerY, boostyW, footerH);
+            _boostyLinkBtn.Click += delegate { Program.OpenBrowserUrl(Program.BoostyUrl); };
+            Controls.Add(_boostyLinkBtn);
+
             _supportLinkBtn = new TacticalButton();
             _supportLinkBtn.Text = "Поддержать перевод";
             _supportLinkBtn.Font = _fontSmall;
             _supportLinkBtn.IsSubtleLink = true;
             _supportLinkBtn.CornerRadius = S(5);
-            _supportLinkBtn.Bounds = new Rectangle(ClientSize.Width - pad - ghW - S(8) - supW, footerY, supW, footerH);
+            _supportLinkBtn.Bounds = new Rectangle(ClientSize.Width - pad - ghW - S(8) - boostyW - S(8) - supW, footerY, supW, footerH);
             _supportLinkBtn.Click += delegate { Program.OpenBrowserUrl(Program.SupportUrl); };
             Controls.Add(_supportLinkBtn);
         }
@@ -3874,10 +3875,6 @@ namespace ZombiesArentRealRuSetup
                 _steamDir = SteamLocator.DetectSteamDirectory(null, currentGameDir);
             }
 
-            List<UserAchievementProfile> profiles = SteamUserStatsReader.LoadProfiles(_steamDir, _payload.Achievements.Count);
-            _unlockedCount = profiles.Count > 0 ? profiles[0].UnlockedCount : 0;
-            _achievementsBtn.Text = string.Format(CultureInfo.InvariantCulture, "Достижения ({0} / {1})", _unlockedCount, _payload.Achievements.Count);
-
             bool hasBackup = validGame && BackupManifestStore.HasValidBackup(currentGameDir);
             bool installed = validGame && InstallerService.IsRussifierInstalled(currentGameDir);
 
@@ -3906,7 +3903,6 @@ namespace ZombiesArentRealRuSetup
             _installBtn.Enabled = !_isBusy && validGame;
             _uninstallBtn.Enabled = !_isBusy && hasBackup;
             _browseBtn.Enabled = !_isBusy;
-            _achievementsBtn.Enabled = !_isBusy;
             Invalidate();
         }
 
@@ -4119,15 +4115,6 @@ namespace ZombiesArentRealRuSetup
             }
         }
 
-        private void OnAchievementsClicked(object sender, EventArgs e)
-        {
-            using (AchievementsForm dlg = new AchievementsForm(_payload, _steamDir, false, _appBaseDir, _pathBox.Text))
-            {
-                dlg.ShowDialog(this);
-            }
-            RefreshUiState();
-        }
-
         private void RunWorkerAction(string startHeader, Action<Action<string>> work, Action<Exception> onCompleted)
         {
             _isBusy = true;
@@ -4309,7 +4296,7 @@ namespace ZombiesArentRealRuSetup
             Rectangle leftFooter = new Rectangle(S(22), S(372), S(260), S(28));
             TextRenderer.DrawText(
                 g,
-                "v1.0 · neoru-droid",
+                "v1.1 · neoru-droid",
                 _fontSmall,
                 leftFooter,
                 TacticalTheme.TextDim,
@@ -4673,7 +4660,7 @@ namespace ZombiesArentRealRuSetup
                 req.Method = "GET";
                 req.Timeout = 4500;
                 req.ReadWriteTimeout = 4500;
-                req.UserAgent = "ZombiesArentReal-RU-Setup/1.0";
+                req.UserAgent = "ZombiesArentReal-RU-Setup/1.1";
 
                 using (HttpWebResponse resp = (HttpWebResponse)req.GetResponse())
                 using (Stream netStream = resp.GetResponseStream())

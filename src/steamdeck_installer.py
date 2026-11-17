@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any, Protocol, TextIO
 
 TARGET_APP_ID = 5185890
+BOOSTY_URL = "https://boosty.to/cd_tixo"
 GAME_FOLDER_NAME = "Zombies-Arent-Real"
 GAME_EXE_NAME = "zombies-arent-real.exe"
 SCHEMA_FILE_NAME = "UserGameStatsSchema_5185890.bin"
@@ -126,7 +127,7 @@ class BackupFileItem:
 @dataclass
 class BackupManifest:
     manifest_version: int = 1
-    installer_version: str = "1.0.0"
+    installer_version: str = "1.1.0"
     app_id: int = TARGET_APP_ID
     created_utc: str = ""
     updated_utc: str = ""
@@ -185,7 +186,7 @@ def _bundle_from_dict(root: dict[str, Any]) -> PayloadBundle | None:
     }
     lang_map = {str(k): str(v) for k, v in dict(root["lang"]).items()}
     return PayloadBundle(
-        version=str(root.get("version", "1.0.0")),
+        version=str(root.get("version", "1.1.0")),
         app_id=TARGET_APP_ID,
         lang=lang_map,
         achievements=_parse_achievement_defs(list(root["achievements"])),
@@ -231,7 +232,7 @@ def _load_payload_from_data_dir(data_dir: Path) -> PayloadBundle | None:
         return None
     return _bundle_from_dict(
         {
-            "version": "1.0.0",
+            "version": "1.1.0",
             "app_id": TARGET_APP_ID,
             "lang": json.loads(lang_json.read_text(encoding="utf-8")),
             "achievements": json.loads(ach_json.read_text(encoding="utf-8")),
@@ -789,7 +790,7 @@ def load_backup_manifest(manifest_path: Path) -> BackupManifest:
     ]
     return BackupManifest(
         manifest_version=int(root.get("manifest_version", 1)),
-        installer_version=str(root.get("installer_version", "1.0.0")),
+        installer_version=str(root.get("installer_version", "1.1.0")),
         app_id=int(root.get("app_id", TARGET_APP_ID)),
         created_utc=str(root.get("created_utc", "")),
         updated_utc=str(root.get("updated_utc", "")),
@@ -1352,9 +1353,6 @@ def _execute_gui_action(
     if choice == "browse":
         picked = _gui_pick_valid_game_dir(game_dir, gui, title)
         return (picked, steam_dir or detect_steam_dir(None, picked)) if picked else (game_dir, steam_dir)
-    if choice == "achievements":
-        gui.show_report(title, format_achievements_report(payload, steam_dir))
-        return game_dir, steam_dir
 
     resolved = game_dir if is_valid_game_dir(game_dir) else _gui_pick_valid_game_dir(game_dir, gui, title)
     if resolved is None:
@@ -1376,16 +1374,17 @@ def run_gui_menu(
     steam_dir: Path | None,
     gui: GuiBackend,
 ) -> int:
-    title = "Zombies Aren't Real - Русификатор v1.0"
+    title = "Zombies Aren't Real - Русификатор v1.1"
     cur_game, cur_steam = game_dir, steam_dir
     while True:
-        profiles = load_user_profiles(cur_steam, len(payload.achievements))
-        unlocked = profiles[0].unlocked_count if profiles else 0
-        status_text = f"Состояние: {_gui_state_label(cur_game)}\nПапка игры: {cur_game or 'не найдена'}"
+        status_text = (
+            f"Состояние: {_gui_state_label(cur_game)}\n"
+            f"Папка игры: {cur_game or 'не найдена'}\n"
+            f"Boosty: {BOOSTY_URL}"
+        )
         items = [
             ("install", "Установить русификатор"),
             ("uninstall", "Вернуть оригинал"),
-            ("achievements", f"Достижения ({unlocked} / {len(payload.achievements)})"),
             ("browse", "Выбрать папку с игрой..."),
             ("exit", "Выход"),
         ]
@@ -1451,9 +1450,6 @@ def _handle_terminal_choice(
     if choice in ("0", "q", "exit"):
         return game_dir, steam_dir, True
     if choice == "3":
-        stdout.write("\n" + format_achievements_report(payload, steam_dir) + "\n")
-        return game_dir, steam_dir, False
-    if choice == "4":
         picked = _prompt_terminal_game_dir(stdin, stdout)
         return (picked, steam_dir or detect_steam_dir(None, picked), False) if picked else (game_dir, steam_dir, False)
     if choice in ("1", "2"):
@@ -1474,20 +1470,18 @@ def run_terminal_menu(
 ) -> int:
     cur_game, cur_steam = game_dir, steam_dir
     while True:
-        profiles = load_user_profiles(cur_steam, len(payload.achievements))
-        unlocked = profiles[0].unlocked_count if profiles else 0
         valid = is_valid_game_dir(cur_game)
         state_lbl = ("Установлен" if is_russifier_installed(cur_game) else "Не установлен") if valid else "укажите папку игры"
         stdout.write(
-            f"\n=== Zombies Aren't Real - Русификатор v1.0 (Steam Deck / Linux) ===\n"
+            f"\n=== Zombies Aren't Real - Русификатор v1.1 (Steam Deck / Linux) ===\n"
             f"Папка игры: {cur_game if valid else 'не найдена'}\n"
             f"Состояние:  {state_lbl}\n"
+            f"Boosty:     {BOOSTY_URL}\n"
             f"1) Установить русификатор\n"
             f"2) Вернуть оригинал\n"
-            f"3) Достижения ({unlocked} / {len(payload.achievements)})\n"
-            f"4) Указать папку с игрой\n"
+            f"3) Указать папку с игрой\n"
             f"0) Выход\n"
-            f"Выберите пункт [0-4]: "
+            f"Выберите пункт [0-3]: "
         )
         stdout.flush()
         raw = stdin.readline()

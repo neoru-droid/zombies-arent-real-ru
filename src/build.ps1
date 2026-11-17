@@ -58,7 +58,7 @@ try {
         }
 
         $payloadObj = @{
-            version      = "1.0.0"
+            version      = "1.1.0"
             app_id       = 5185890
             lang         = $langMap
             achievements = $achList
@@ -162,6 +162,7 @@ try {
     $cscArgs = @(
         "/nologo",
         "/optimize+",
+        "/warnaserror+",
         "/debug-",
         "/codepage:65001",
         "/platform:anycpu",
