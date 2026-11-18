@@ -1,12 +1,12 @@
-# Zombies Aren't Real: Русификатор
+# Zombies Aren’t Real · Русификатор
 
-![Zombies Aren't Real: Русификатор](docs/screenshots/cover_wide.png)
+Исправленный русский текст, пиксельный шрифт 8×8 и гладкий Tactical HUD в настройках экрана.
 
-Исправленный русский перевод и пиксельный шрифт 8x8 (плюс гладкий **Tactical HUD** в настройках экрана) для **Zombies Aren't Real**.
+**[Скачать перевод v1.1 (ZIP)](https://github.com/neoru-droid/zombies-arent-real-ru/releases/download/v1.1.0/ZombiesArentReal-RU-v1.1.zip)** · [Как установить](#установка)
 
-**[Скачать ZombiesArentReal-RU-v1.1.zip](https://github.com/neoru-droid/zombies-arent-real-ru/releases/latest)** *(актуально для патча `v0.43.1`)*
+Проверено на патче 0.43.1.
 
-[Все версии](https://github.com/neoru-droid/zombies-arent-real-ru/releases) · [Руководство в Steam](https://steamcommunity.com/sharedfiles/filedetails/?id=3840725363) · [Тема в Steam](https://steamcommunity.com/app/5185890/discussions/0/571554831822702858/) · [Boosty](https://boosty.to/cd_tixo) · [Все переводы автора](https://github.com/neoru-droid)
+![Карточки снаряжения с русскими надписями](docs/screenshots/cover_wide.png)
 
 ## Установка
 1. Закройте игру, распакуйте архив и запустите `ZombiesArentReal-RU-Setup.exe` -> **«Установить русификатор»**.
@@ -27,21 +27,40 @@
 
 ## Скриншоты
 
-| Кампания и меню | Планирование обороны |
-| :---: | :---: |
-| ![Кампания и меню](docs/screenshots/guide_1_main_menu.png) | ![Планирование обороны](docs/screenshots/guide_2_planning_hud.png) |
+<details>
+<summary>Открыть игровые кадры</summary>
 
-| Бой с ордой | Настройки и шрифты |
-| :---: | :---: |
-| ![Бой с ордой](docs/screenshots/guide_3_battle_action.png) | ![Настройки и шрифты](docs/screenshots/guide_4_mutators_fonts.png) |
+**Кампания и меню**
 
-| Снаряжение и перки | Установщик |
-| :---: | :---: |
-| ![Снаряжение и перки](docs/screenshots/guide_5_upgrades_or_endscreen.png) | ![Установщик](docs/screenshots/guide_7_installer.png) |
+![Кампания и меню](docs/screenshots/guide_1_main_menu.png)
+
+**Планирование обороны**
+
+![Планирование обороны](docs/screenshots/guide_2_planning_hud.png)
+
+**Бой с ордой**
+
+![Бой с ордой](docs/screenshots/guide_3_battle_action.png)
+
+**Настройки и шрифты**
+
+![Настройки и шрифты](docs/screenshots/guide_4_mutators_fonts.png)
+
+**Снаряжение и перки**
+
+![Снаряжение и перки](docs/screenshots/guide_5_upgrades_or_endscreen.png)
+
+**Установщик**
+
+![Установщик](docs/screenshots/guide_7_installer.png)
+
+</details>
 
 ## История обновлений
 - **[v1.1](https://github.com/neoru-droid/zombies-arent-real-ru/releases/tag/v1.1.0)** - адаптация под патч игры `v0.43.1`, кнопка Boosty в установщике.
 - **[v1.0](https://github.com/neoru-droid/zombies-arent-real-ru/releases/tag/v1.0.0)** - первый релиз перевода текста, пиксельного шрифта `8x8` и `Tactical HUD`.
+
+[Все версии](https://github.com/neoru-droid/zombies-arent-real-ru/releases) · [Руководство в Steam](https://steamcommunity.com/sharedfiles/filedetails/?id=3840725363) · [Тема в Steam](https://steamcommunity.com/app/5185890/discussions/0/571554831822702858/)
 
 <a id="support"></a>
 ## Поддержать
