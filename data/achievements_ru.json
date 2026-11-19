@@ -65,7 +65,7 @@
     "name_en": "Choke Point",
     "desc_en": "Destroy a bridge",
     "name_ru": "Узкое горлышко",
-    "desc_ru": "Взорвите мост",
+    "desc_ru": "Разрушьте мост",
     "icon_unlocked": "43b164433a0c220494f7200cb831dd984dc24921.jpg",
     "icon_locked": "e31bd3b3f780c6c3e321565671b2805043035295.jpg"
   },
@@ -115,7 +115,7 @@
     "name_en": "Masterful ",
     "desc_en": "Beat a whole campaign, started fresh from scenario 1, without deploying any battle-phase abilities.",
     "name_ru": "Мастер тактики",
-    "desc_ru": "Пройдите всю кампанию с 1-го уровня без боевых способностей",
+    "desc_ru": "Начните новую кампанию с первого уровня и пройдите её, ни разу не применив боевую способность",
     "icon_unlocked": "feb7cde33924d3783b8d2eb1e7949a03c7e0444d.jpg",
     "icon_locked": "65e6aba8360bb462901d7a9d190a8358d3d433a9.jpg"
   },

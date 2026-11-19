@@ -1,12 +1,12 @@
 # Zombies Aren’t Real · Русификатор
 
-Исправленный русский текст, пиксельный шрифт 8×8 и гладкий Tactical HUD в настройках экрана.
+Исправленный русский текст, пиксельный шрифт 8x8 и гладкий Tactical HUD в настройках экрана.
 
 **[Скачать перевод v1.2 (ZIP)](https://github.com/neoru-droid/zombies-arent-real-ru/releases/download/v1.2.0/ZombiesArentReal-RU-v1.2.zip)** · [Как установить](#установка)
 
 Проверено на патче 0.43.1 (сборка Steam 26692741).
 
-![Карточки снаряжения с русскими надписями](docs/screenshots/cover_wide.png)
+![Zombies Aren’t Real · Русификатор](docs/screenshots/cover_wide.png)
 
 ## Установка
 1. Закройте игру, распакуйте архив и запустите `ZombiesArentReal-RU-Setup.exe` -> **«Установить русификатор»**.
@@ -53,7 +53,7 @@
 </details>
 
 ## История обновлений
-- **[v1.2](https://github.com/neoru-droid/zombies-arent-real-ru/releases/tag/v1.2.0)** — Исправлены описания снаряжения и подсказка гарнизона. Установщик обновляет текст и шрифты.
+- **[v1.2](https://github.com/neoru-droid/zombies-arent-real-ru/releases/tag/v1.2.0)** - исправлены описания снаряжения и подсказка гарнизона. Установщик обновляет текст и шрифты.
 - **[v1.1](https://github.com/neoru-droid/zombies-arent-real-ru/releases/tag/v1.1.0)** - адаптация под патч игры `v0.43.1`, кнопка Boosty в установщике.
 - **[v1.0](https://github.com/neoru-droid/zombies-arent-real-ru/releases/tag/v1.0.0)** - первый релиз перевода текста, пиксельного шрифта `8x8` и `Tactical HUD`.
 
