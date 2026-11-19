@@ -22,7 +22,7 @@ using System.Windows.Forms;
 using Microsoft.Win32;
 
 [assembly: AssemblyTitle("Zombies Aren't Real — Русификатор")]
-[assembly: AssemblyDescription("Установщик русификатора текста, шрифтов и достижений Steam для Zombies Aren't Real")]
+[assembly: AssemblyDescription("Установщик русификатора текста и шрифтов для Zombies Aren't Real")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("neoru-droid")]
 [assembly: AssemblyProduct("Zombies Aren't Real — Русификатор")]
@@ -30,8 +30,8 @@ using Microsoft.Win32;
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]
-[assembly: AssemblyVersion("1.1.0.0")]
-[assembly: AssemblyFileVersion("1.1.0.0")]
+[assembly: AssemblyVersion("1.2.0.0")]
+[assembly: AssemblyFileVersion("1.2.0.0")]
 
 namespace ZombiesArentRealRuSetup
 {
@@ -108,13 +108,6 @@ namespace ZombiesArentRealRuSetup
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
                 return 1;
-            }
-
-            if (cli.Mode == CliMode.AchievementsGui)
-            {
-                string steamDir = SteamLocator.DetectSteamDirectory(cli.ExplicitSteamDir, cli.ExplicitGameDir);
-                Application.Run(new AchievementsForm(payload, steamDir, true, appBaseDir, cli.ExplicitGameDir));
-                return 0;
             }
 
             Application.Run(new SetupForm(payload, appBaseDir, cli.ExplicitGameDir, cli.ExplicitSteamDir, cli.Mode));
@@ -271,11 +264,10 @@ namespace ZombiesArentRealRuSetup
 
         private static void PrintCliHelp()
         {
-            Console.WriteLine("Zombies Aren't Real — Русификатор v1.1 (neoru-droid)");
+            Console.WriteLine("Zombies Aren't Real — Русификатор v1.2 (neoru-droid)");
             Console.WriteLine();
             Console.WriteLine("Использование:");
             Console.WriteLine("  ZombiesArentReal-RU-Setup.exe                        Графическое окно установщика");
-            Console.WriteLine("  ZombiesArentReal-RU-Setup.exe --achievements         Окно просмотра достижений Steam");
             Console.WriteLine("  ZombiesArentReal-RU-Setup.exe --status [параметры]   Проверка состояния и путей");
             Console.WriteLine("  ZombiesArentReal-RU-Setup.exe --install [параметры]  Установка русификатора");
             Console.WriteLine("  ZombiesArentReal-RU-Setup.exe --uninstall [параметры] Возврат оригинальных файлов");
@@ -291,7 +283,6 @@ namespace ZombiesArentRealRuSetup
         DefaultGui,
         UacInstallGui,
         UacUninstallGui,
-        AchievementsGui,
         Status,
         Install,
         Uninstall
@@ -346,11 +337,6 @@ namespace ZombiesArentRealRuSetup
                     parsed.Mode = CliMode.UacUninstallGui;
                     modeCount++;
                 }
-                else if (EqualsFlag(arg, "--achievements"))
-                {
-                    parsed.Mode = CliMode.AchievementsGui;
-                    modeCount++;
-                }
                 else if (EqualsFlag(arg, "--game-dir"))
                 {
                     if (i + 1 >= args.Length)
@@ -386,7 +372,7 @@ namespace ZombiesArentRealRuSetup
 
             if (!parsed.ShowHelp && modeCount > 1)
             {
-                error = "Укажите только один режим работы (--status, --install, --uninstall или --achievements).";
+                error = "Укажите только один режим работы (--status, --install, или --uninstall).";
                 return false;
             }
 
@@ -404,18 +390,7 @@ namespace ZombiesArentRealRuSetup
         public string Version;
         public int AppId;
         public Dictionary<string, string> Lang;
-        public List<AchievementDefinition> Achievements;
         public Dictionary<string, byte[]> Fonts;
-    }
-
-    internal sealed class AchievementDefinition
-    {
-        public int Bit;
-        public string Id;
-        public string NameRu;
-        public string DescRu;
-        public string IconUnlocked;
-        public string IconLocked;
     }
 
     internal static class PayloadLoader
@@ -472,7 +447,6 @@ namespace ZombiesArentRealRuSetup
             data.Version = GetString(root, "version", "1.1.0");
             data.AppId = GetInt(root, "app_id", Program.TargetAppId);
             data.Lang = ParseLangMap(root);
-            data.Achievements = ParseAchievementsList(root);
             data.Fonts = ParseFontsMap(root);
             return data;
         }
@@ -490,45 +464,6 @@ namespace ZombiesArentRealRuSetup
                 map[kv.Key] = kv.Value == null ? string.Empty : Convert.ToString(kv.Value, CultureInfo.InvariantCulture);
             }
             return map;
-        }
-
-        private static List<AchievementDefinition> ParseAchievementsList(IDictionary<string, object> root)
-        {
-            List<AchievementDefinition> list = new List<AchievementDefinition>();
-            object rawListObj;
-            if (!root.TryGetValue("achievements", out rawListObj) || rawListObj == null)
-            {
-                throw new InvalidDataException("В ресурсе русификатора отсутствует секция achievements.");
-            }
-
-            IEnumerable items = rawListObj as IEnumerable;
-            if (items == null)
-            {
-                throw new InvalidDataException("Некорректный формат списка достижений.");
-            }
-
-            foreach (object obj in items)
-            {
-                IDictionary<string, object> d = obj as IDictionary<string, object>;
-                if (d == null)
-                {
-                    continue;
-                }
-                AchievementDefinition ach = new AchievementDefinition();
-                ach.Bit = GetInt(d, "bit", -1);
-                ach.Id = GetString(d, "id", GetString(d, "api_id", string.Empty));
-                ach.NameRu = GetString(d, "name_ru", string.Empty);
-                ach.DescRu = GetString(d, "desc_ru", string.Empty);
-                ach.IconUnlocked = GetString(d, "icon_unlocked", GetString(d, "icon", string.Empty));
-                ach.IconLocked = GetString(d, "icon_locked", GetString(d, "icon_gray", string.Empty));
-                list.Add(ach);
-            }
-
-            list.Sort(delegate(AchievementDefinition a, AchievementDefinition b)
-            {
-                return a.Bit.CompareTo(b.Bit);
-            });
-            return list;
         }
 
         private static Dictionary<string, byte[]> ParseFontsMap(IDictionary<string, object> root)
@@ -1479,525 +1414,6 @@ namespace ZombiesArentRealRuSetup
         }
     }
 
-    internal static class ValveKvCodec
-    {
-        public const byte TagMap = 0x00;
-        public const byte TagString = 0x01;
-        public const byte TagInt32 = 0x02;
-        public const byte TagFloat32 = 0x03;
-        public const byte TagPtr = 0x04;
-        public const byte TagWString = 0x05;
-        public const byte TagColor = 0x06;
-        public const byte TagUInt64 = 0x07;
-        public const byte TagEnd = 0x08;
-        public const byte TagInt64 = 0x0A;
-
-        internal sealed class KvNode
-        {
-            public byte Tag;
-            public byte[] RawKey;
-            public string Key;
-            public List<KvNode> Children;
-            public byte[] RawValueBytes;
-            public int Int32Value;
-
-            public string GetUtf8String()
-            {
-                if (RawValueBytes == null || RawValueBytes.Length == 0)
-                {
-                    return string.Empty;
-                }
-                return LangPatcher.Utf8NoBom.GetString(RawValueBytes);
-            }
-
-            public void SetUtf8String(string val)
-            {
-                RawValueBytes = LangPatcher.Utf8NoBom.GetBytes(val ?? string.Empty);
-            }
-        }
-
-        public static List<KvNode> ParseRoot(byte[] raw)
-        {
-            if (raw == null || raw.Length == 0)
-            {
-                throw new InvalidDataException("Пустой бинарный файл Valve KeyValues.");
-            }
-            int pos = 0;
-            List<KvNode> root = ParseMapEntries(raw, ref pos);
-            if (pos != raw.Length)
-            {
-                throw new InvalidDataException("Лишние байты после конца корневой карты Valve KeyValues на позиции " + pos);
-            }
-            return root;
-        }
-
-        public static byte[] SerializeRoot(List<KvNode> rootEntries)
-        {
-            using (MemoryStream ms = new MemoryStream(8192))
-            {
-                WriteMapEntries(ms, rootEntries);
-                return ms.ToArray();
-            }
-        }
-
-        public static byte[] PatchAchievementSchema(byte[] rawSchema, List<AchievementDefinition> achievements, out int patchedCount)
-        {
-            List<KvNode> root = ParseRoot(rawSchema);
-            if (root.Count != 1 || root[0].Tag != TagMap)
-            {
-                throw new InvalidDataException("Неожиданная корневая структура UserGameStatsSchema_5185890.bin.");
-            }
-
-            KvNode statsNode = FindChild(root[0].Children, "stats", TagMap);
-            if (statsNode == null)
-            {
-                throw new InvalidDataException("В схеме достижений отсутствует узел stats.");
-            }
-
-            List<KvNode> bits = FindAchievementsBits(statsNode.Children);
-            if (bits == null)
-            {
-                throw new InvalidDataException("В схеме достижений отсутствует блок ACHIEVEMENTS/bits.");
-            }
-
-            Dictionary<string, AchievementDefinition> byId = new Dictionary<string, AchievementDefinition>(StringComparer.Ordinal);
-            Dictionary<string, AchievementDefinition> byBit = new Dictionary<string, AchievementDefinition>(StringComparer.Ordinal);
-            for (int i = 0; i < achievements.Count; i++)
-            {
-                AchievementDefinition a = achievements[i];
-                if (!string.IsNullOrEmpty(a.Id))
-                {
-                    byId[a.Id] = a;
-                }
-                byBit[a.Bit.ToString(CultureInfo.InvariantCulture)] = a;
-            }
-
-            patchedCount = 0;
-            for (int i = 0; i < bits.Count; i++)
-            {
-                KvNode bitNode = bits[i];
-                if (bitNode.Tag != TagMap)
-                {
-                    continue;
-                }
-
-                AchievementDefinition def = null;
-                KvNode apiNameNode = FindChild(bitNode.Children, "name", TagString);
-                if (apiNameNode != null)
-                {
-                    byId.TryGetValue(apiNameNode.GetUtf8String(), out def);
-                }
-                if (def == null)
-                {
-                    byBit.TryGetValue(bitNode.Key, out def);
-                }
-                if (def == null)
-                {
-                    continue;
-                }
-
-                KvNode displayNode = FindChild(bitNode.Children, "display", TagMap);
-                if (displayNode == null)
-                {
-                    continue;
-                }
-                KvNode nameMap = FindChild(displayNode.Children, "name", TagMap);
-                KvNode descMap = FindChild(displayNode.Children, "desc", TagMap);
-                if (nameMap == null || descMap == null)
-                {
-                    continue;
-                }
-
-                UpsertStringChild(nameMap.Children, "russian", def.NameRu);
-                UpsertStringChild(descMap.Children, "russian", def.DescRu);
-                patchedCount++;
-            }
-
-            return SerializeRoot(root);
-        }
-
-        public static KvNode FindChild(List<KvNode> list, string key, byte tag)
-        {
-            if (list == null)
-            {
-                return null;
-            }
-            for (int i = 0; i < list.Count; i++)
-            {
-                if (list[i].Tag == tag && string.Equals(list[i].Key, key, StringComparison.OrdinalIgnoreCase))
-                {
-                    return list[i];
-                }
-            }
-            return null;
-        }
-
-        private static List<KvNode> FindAchievementsBits(List<KvNode> statsChildren)
-        {
-            for (int i = 0; i < statsChildren.Count; i++)
-            {
-                KvNode statEntry = statsChildren[i];
-                if (statEntry.Tag != TagMap)
-                {
-                    continue;
-                }
-                KvNode typeNode = FindChild(statEntry.Children, "type", TagString);
-                if (typeNode != null && string.Equals(typeNode.GetUtf8String(), "ACHIEVEMENTS", StringComparison.OrdinalIgnoreCase))
-                {
-                    KvNode bitsNode = FindChild(statEntry.Children, "bits", TagMap);
-                    if (bitsNode != null)
-                    {
-                        return bitsNode.Children;
-                    }
-                }
-                if (string.Equals(statEntry.Key, "1", StringComparison.Ordinal))
-                {
-                    KvNode bitsFallback = FindChild(statEntry.Children, "bits", TagMap);
-                    if (bitsFallback != null)
-                    {
-                        return bitsFallback.Children;
-                    }
-                }
-            }
-            return null;
-        }
-
-        private static void UpsertStringChild(List<KvNode> entries, string key, string value)
-        {
-            for (int i = 0; i < entries.Count; i++)
-            {
-                if (entries[i].Tag == TagString && string.Equals(entries[i].Key, key, StringComparison.Ordinal))
-                {
-                    entries[i].SetUtf8String(value);
-                    return;
-                }
-            }
-            KvNode created = new KvNode();
-            created.Tag = TagString;
-            created.Key = key;
-            created.RawKey = LangPatcher.Utf8NoBom.GetBytes(key);
-            created.SetUtf8String(value);
-            for (int i = 0; i < entries.Count; i++)
-            {
-                if (string.Equals(entries[i].Key, "english", StringComparison.Ordinal))
-                {
-                    entries.Insert(i + 1, created);
-                    return;
-                }
-            }
-            entries.Insert(0, created);
-        }
-
-        private static List<KvNode> ParseMapEntries(byte[] buf, ref int pos)
-        {
-            List<KvNode> entries = new List<KvNode>();
-            while (pos < buf.Length)
-            {
-                int tagOffset = pos;
-                byte tag = buf[pos++];
-                if (tag == TagEnd)
-                {
-                    return entries;
-                }
-
-                byte[] rawKey = ReadNullTerminatedBytes(buf, ref pos);
-                KvNode node = new KvNode();
-                node.Tag = tag;
-                node.RawKey = rawKey;
-                node.Key = LangPatcher.Utf8NoBom.GetString(rawKey);
-
-                if (tag == TagMap)
-                {
-                    node.Children = ParseMapEntries(buf, ref pos);
-                }
-                else if (tag == TagString)
-                {
-                    node.RawValueBytes = ReadNullTerminatedBytes(buf, ref pos);
-                }
-                else if (tag == TagInt32)
-                {
-                    byte[] b4 = ReadFixedBytes(buf, ref pos, 4);
-                    node.RawValueBytes = b4;
-                    node.Int32Value = BitConverter.ToInt32(b4, 0);
-                }
-                else if (tag == TagFloat32 || tag == TagPtr || tag == TagColor)
-                {
-                    node.RawValueBytes = ReadFixedBytes(buf, ref pos, 4);
-                }
-                else if (tag == TagUInt64 || tag == TagInt64)
-                {
-                    node.RawValueBytes = ReadFixedBytes(buf, ref pos, 8);
-                }
-                else if (tag == TagWString)
-                {
-                    node.RawValueBytes = ReadNullTerminatedUtf16Bytes(buf, ref pos);
-                }
-                else
-                {
-                    throw new InvalidDataException(
-                        string.Format("Неизвестный тег Valve Binary KV 0x{0:X2} на смещении {1}.", tag, tagOffset));
-                }
-
-                entries.Add(node);
-            }
-            throw new InvalidDataException("Незавершённая карта Valve Binary KV (отсутствует маркер 0x08).");
-        }
-
-        private static void WriteMapEntries(Stream ms, List<KvNode> entries)
-        {
-            for (int i = 0; i < entries.Count; i++)
-            {
-                KvNode n = entries[i];
-                ms.WriteByte(n.Tag);
-                byte[] keyBytes = n.RawKey ?? LangPatcher.Utf8NoBom.GetBytes(n.Key ?? string.Empty);
-                ms.Write(keyBytes, 0, keyBytes.Length);
-                ms.WriteByte(0x00);
-
-                if (n.Tag == TagMap)
-                {
-                    WriteMapEntries(ms, n.Children);
-                }
-                else if (n.Tag == TagString)
-                {
-                    byte[] strBytes = n.RawValueBytes ?? new byte[0];
-                    ms.Write(strBytes, 0, strBytes.Length);
-                    ms.WriteByte(0x00);
-                }
-                else if (n.Tag == TagInt32)
-                {
-                    byte[] b4 = n.RawValueBytes ?? BitConverter.GetBytes(n.Int32Value);
-                    ms.Write(b4, 0, 4);
-                }
-                else if (n.Tag == TagFloat32 || n.Tag == TagPtr || n.Tag == TagColor)
-                {
-                    ms.Write(n.RawValueBytes, 0, 4);
-                }
-                else if (n.Tag == TagUInt64 || n.Tag == TagInt64)
-                {
-                    ms.Write(n.RawValueBytes, 0, 8);
-                }
-                else if (n.Tag == TagWString)
-                {
-                    ms.Write(n.RawValueBytes, 0, n.RawValueBytes.Length);
-                    ms.WriteByte(0x00);
-                    ms.WriteByte(0x00);
-                }
-                else
-                {
-                    throw new InvalidOperationException("Неподдерживаемый тег при записи Valve Binary KV: " + n.Tag);
-                }
-            }
-            ms.WriteByte(TagEnd);
-        }
-
-        private static byte[] ReadNullTerminatedBytes(byte[] buf, ref int pos)
-        {
-            int start = pos;
-            while (pos < buf.Length && buf[pos] != 0x00)
-            {
-                pos++;
-            }
-            if (pos >= buf.Length)
-            {
-                throw new InvalidDataException("Незакрытая UTF-8 строка в Valve Binary KV.");
-            }
-            int len = pos - start;
-            byte[] slice = new byte[len];
-            Buffer.BlockCopy(buf, start, slice, 0, len);
-            pos++;
-            return slice;
-        }
-
-        private static byte[] ReadNullTerminatedUtf16Bytes(byte[] buf, ref int pos)
-        {
-            int start = pos;
-            while (pos + 1 < buf.Length && (buf[pos] != 0x00 || buf[pos + 1] != 0x00))
-            {
-                pos += 2;
-            }
-            if (pos + 1 >= buf.Length)
-            {
-                throw new InvalidDataException("Незакрытая UTF-16 строка в Valve Binary KV.");
-            }
-            int len = pos - start;
-            byte[] slice = new byte[len];
-            Buffer.BlockCopy(buf, start, slice, 0, len);
-            pos += 2;
-            return slice;
-        }
-
-        private static byte[] ReadFixedBytes(byte[] buf, ref int pos, int count)
-        {
-            if (pos + count > buf.Length)
-            {
-                throw new InvalidDataException("Обрыв бинарного значения Valve Binary KV на позиции " + pos);
-            }
-            byte[] slice = new byte[count];
-            Buffer.BlockCopy(buf, pos, slice, 0, count);
-            pos += count;
-            return slice;
-        }
-    }
-
-    internal sealed class UserAchievementProfile
-    {
-        public string FilePath;
-        public string ProfileLabel;
-        public DateTime LastWriteUtc;
-        public uint Bitmask;
-        public Dictionary<int, uint> UnlockUnixTimes = new Dictionary<int, uint>();
-        public int UnlockedCount;
-
-        public bool IsUnlocked(int bit)
-        {
-            if (bit < 0 || bit >= 32)
-            {
-                return false;
-            }
-            return (Bitmask & (1u << bit)) != 0u;
-        }
-
-        public string FormatUnlockStatus(int bit)
-        {
-            if (!IsUnlocked(bit))
-            {
-                return "Не получено";
-            }
-            uint unixSec;
-            if (UnlockUnixTimes.TryGetValue(bit, out unixSec) && unixSec > 0u)
-            {
-                DateTime utc = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(unixSec);
-                DateTime local = utc.ToLocalTime();
-                return "Открыто " + local.ToString("dd.MM.yyyy в HH:mm", CultureInfo.InvariantCulture);
-            }
-            return "Открыто в Steam";
-        }
-    }
-
-    internal static class SteamUserStatsReader
-    {
-        private static readonly Regex FileAccountRegex = new Regex(
-            @"^UserGameStats_(\d+)_5185890\.bin$",
-            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-
-        public static List<UserAchievementProfile> LoadProfiles(string steamDir, int totalAchievementCount)
-        {
-            List<UserAchievementProfile> profiles = new List<UserAchievementProfile>();
-            string statsDir = SteamLocator.ResolveSteamStatsDirectory(steamDir);
-            if (string.IsNullOrEmpty(statsDir) || !SteamLocator.SafeDirectoryExists(statsDir))
-            {
-                return profiles;
-            }
-
-            string[] files;
-            try
-            {
-                files = Directory.GetFiles(statsDir, "UserGameStats_*_5185890.bin", SearchOption.TopDirectoryOnly);
-            }
-            catch
-            {
-                return profiles;
-            }
-
-            Array.Sort(files, delegate(string a, string b)
-            {
-                DateTime ta = SafeLastWriteUtc(a);
-                DateTime tb = SafeLastWriteUtc(b);
-                return tb.CompareTo(ta);
-            });
-
-            for (int i = 0; i < files.Length; i++)
-            {
-                string fileName = Path.GetFileName(files[i]);
-                if (!FileAccountRegex.IsMatch(fileName))
-                {
-                    continue;
-                }
-                UserAchievementProfile parsed = TryParseStatsFile(files[i], i + 1, totalAchievementCount);
-                if (parsed != null)
-                {
-                    profiles.Add(parsed);
-                }
-            }
-            return profiles;
-        }
-
-        private static UserAchievementProfile TryParseStatsFile(string path, int ordinalIndex, int totalCount)
-        {
-            try
-            {
-                byte[] raw = File.ReadAllBytes(path);
-                List<ValveKvCodec.KvNode> root = ValveKvCodec.ParseRoot(raw);
-                UserAchievementProfile prof = new UserAchievementProfile();
-                prof.FilePath = path;
-                prof.LastWriteUtc = SafeLastWriteUtc(path);
-
-                ValveKvCodec.KvNode cacheNode = ValveKvCodec.FindChild(root, "cache", ValveKvCodec.TagMap);
-                if (cacheNode == null && root.Count == 1 && root[0].Tag == ValveKvCodec.TagMap)
-                {
-                    cacheNode = root[0];
-                }
-
-                if (cacheNode != null)
-                {
-                    ValveKvCodec.KvNode group1 = ValveKvCodec.FindChild(cacheNode.Children, "1", ValveKvCodec.TagMap);
-                    if (group1 != null)
-                    {
-                        ValveKvCodec.KvNode dataNode = ValveKvCodec.FindChild(group1.Children, "data", ValveKvCodec.TagInt32);
-                        if (dataNode != null)
-                        {
-                            prof.Bitmask = unchecked((uint)dataNode.Int32Value);
-                        }
-
-                        ValveKvCodec.KvNode timesNode = ValveKvCodec.FindChild(group1.Children, "AchievementTimes", ValveKvCodec.TagMap);
-                        if (timesNode != null && timesNode.Children != null)
-                        {
-                            for (int i = 0; i < timesNode.Children.Count; i++)
-                            {
-                                ValveKvCodec.KvNode child = timesNode.Children[i];
-                                int bitIndex;
-                                if (child.Tag == ValveKvCodec.TagInt32
-                                    && int.TryParse(child.Key, NumberStyles.Integer, CultureInfo.InvariantCulture, out bitIndex))
-                                {
-                                    prof.UnlockUnixTimes[bitIndex] = unchecked((uint)child.Int32Value);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                int count = 0;
-                int limit = totalCount > 0 ? totalCount : 14;
-                for (int b = 0; b < limit; b++)
-                {
-                    if (prof.IsUnlocked(b))
-                    {
-                        count++;
-                    }
-                }
-                prof.UnlockedCount = count;
-                prof.ProfileLabel = string.Format("Профиль Steam #{0} ({1} / {2})", ordinalIndex, count, limit);
-                return prof;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        private static DateTime SafeLastWriteUtc(string path)
-        {
-            try
-            {
-                return File.GetLastWriteTimeUtc(path);
-            }
-            catch
-            {
-                return DateTime.MinValue;
-            }
-        }
-    }
-
     internal sealed class BackupFileRecord
     {
         public string TargetKind;
@@ -2478,14 +1894,10 @@ namespace ZombiesArentRealRuSetup
             bool installed = validGame && IsRussifierInstalled(gameDir);
             bool hasManifest = validGame && BackupManifestStore.HasValidBackup(gameDir);
 
-            List<UserAchievementProfile> profiles = SteamUserStatsReader.LoadProfiles(steamDir, payload.Achievements.Count);
-            int unlocked = profiles.Count > 0 ? profiles[0].UnlockedCount : 0;
-
             Console.WriteLine("GameDir: " + (validGame ? gameDir : "NOT_FOUND"));
             Console.WriteLine("SteamDir: " + (!string.IsNullOrEmpty(steamDir) ? steamDir : "NOT_FOUND"));
             Console.WriteLine("Installed: " + (installed ? "true" : "false"));
             Console.WriteLine("BackupManifest: " + (hasManifest ? "present" : "absent"));
-            Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "AchievementsUnlocked: {0}/{1}", unlocked, payload.Achievements.Count));
 
             if (validGame)
             {
@@ -2695,47 +2107,12 @@ namespace ZombiesArentRealRuSetup
                     nextManifest.OriginalLanguageLine = null;
                 }
 
-                // 5. Back up & patch Steam UserGameStatsSchema_5185890.bin if present
-                string statsDir = SteamLocator.ResolveSteamStatsDirectory(steamDir);
-                string schemaPath = !string.IsNullOrEmpty(statsDir)
-                    ? Path.Combine(statsDir, SteamLocator.SchemaFileName)
-                    : null;
-
-                if (!string.IsNullOrEmpty(schemaPath) && SteamLocator.SafeFileExists(schemaPath))
+                BackupFileRecord legacy = FindRecord(existingManifest, "steam_schema", SteamLocator.SchemaFileName);
+                if (legacy != null)
                 {
-                    BackupFileRecord prevSchemaRec = FindRecord(existingManifest, "steam_schema", SteamLocator.SchemaFileName);
-                    BackupFileRecord schemaRec = EnsureSteamSchemaBackedUp(schemaPath, backupRoot, existingManifest, log);
-                    byte[] cleanSchemaBytes = File.ReadAllBytes(Path.Combine(backupRoot, schemaRec.BackupRelPath));
-                    int achPatched;
-                    byte[] patchedSchema = ValveKvCodec.PatchAchievementSchema(cleanSchemaBytes, payload.Achievements, out achPatched);
-                    try
-                    {
-                        WriteAtomicTarget(stagingRoot, @"steam_stats\" + SteamLocator.SchemaFileName, schemaPath, patchedSchema);
-                        schemaRec.PatchedSha256 = BackupManifestStore.ComputeSha256Hex(patchedSchema);
-                        nextManifest.SteamSchemaSourcePath = schemaPath;
-                        nextManifest.Files.Add(schemaRec);
-                        log(string.Format(CultureInfo.InvariantCulture, "Обновлена схема достижений Steam: {0} из {1} на русском языке.", achPatched, payload.Achievements.Count));
-                    }
-                    catch (UnauthorizedAccessException)
-                    {
-                        skippedSchemaPath = schemaPath;
-                        if (prevSchemaRec != null)
-                        {
-                            nextManifest.SteamSchemaSourcePath = existingManifest.SteamSchemaSourcePath ?? schemaPath;
-                            nextManifest.Files.Add(prevSchemaRec);
-                        }
-                        else
-                        {
-                            TryDeleteFile(Path.Combine(backupRoot, schemaRec.BackupRelPath));
-                        }
-                        log("Примечание: нет прав записи в папку Steam (" + schemaPath + "). Текст и шрифты игры установлены полностью; для перевода всплывающих достижений в Steam запустите установщик от имени администратора.");
-                    }
+                    nextManifest.SteamSchemaSourcePath = existingManifest.SteamSchemaSourcePath;
+                    nextManifest.Files.Add(legacy);
                 }
-                else
-                {
-                    log("Примечание: кэш UserGameStatsSchema_5185890.bin пока не создан клиентом Steam (перевод игры установлен полностью).");
-                }
-
                 BackupManifestStore.Save(manifestPath, nextManifest);
             }
             finally
@@ -2860,6 +2237,11 @@ namespace ZombiesArentRealRuSetup
                 TryDeleteDirectory(stagingRoot);
             }
 
+            if (!string.IsNullOrEmpty(skippedSchemaPath))
+            {
+                log("Сохранена резервная копия предыдущей версии: " + backupRoot);
+                return;
+            }
             TryDeleteDirectory(backupRoot);
             if (SteamLocator.SafeDirectoryExists(backupRoot))
             {
@@ -2968,52 +2350,6 @@ namespace ZombiesArentRealRuSetup
             rec.BackupRelPath = relPath;
             rec.ExistedOriginally = true;
             rec.OrigSha256 = BackupManifestStore.ComputeSha256Hex(finalOrigBytes);
-            return rec;
-        }
-
-        private static BackupFileRecord EnsureSteamSchemaBackedUp(
-            string schemaLivePath,
-            string backupRoot,
-            BackupManifestData existingManifest,
-            Action<string> log)
-        {
-            string backupRel = @"steam_stats\" + SteamLocator.SchemaFileName;
-            string backupPath = Path.Combine(backupRoot, backupRel);
-            BackupFileRecord prev = FindRecord(existingManifest, "steam_schema", SteamLocator.SchemaFileName);
-
-            byte[] liveBytes = File.ReadAllBytes(schemaLivePath);
-            string liveSha = BackupManifestStore.ComputeSha256Hex(liveBytes);
-
-            bool reuseExisting = false;
-            if (prev != null && SteamLocator.SafeFileExists(backupPath))
-            {
-                string backupSha = BackupManifestStore.ComputeSha256Hex(File.ReadAllBytes(backupPath));
-                if (string.Equals(backupSha, prev.OrigSha256, StringComparison.OrdinalIgnoreCase))
-                {
-                    if (string.Equals(liveSha, prev.PatchedSha256, StringComparison.OrdinalIgnoreCase)
-                        || string.Equals(liveSha, prev.OrigSha256, StringComparison.OrdinalIgnoreCase))
-                    {
-                        reuseExisting = true;
-                    }
-                    else
-                    {
-                        log("Обнаружено обновление схемы достижений Steam — обновляется резервная копия.");
-                    }
-                }
-            }
-
-            if (!reuseExisting)
-            {
-                EnsureParentDirectory(backupPath);
-                File.WriteAllBytes(backupPath, liveBytes);
-            }
-
-            BackupFileRecord rec = new BackupFileRecord();
-            rec.TargetKind = "steam_schema";
-            rec.RelPath = SteamLocator.SchemaFileName;
-            rec.BackupRelPath = backupRel;
-            rec.ExistedOriginally = true;
-            rec.OrigSha256 = BackupManifestStore.ComputeSha256Hex(File.ReadAllBytes(backupPath));
             return rec;
         }
 
@@ -3416,51 +2752,6 @@ namespace ZombiesArentRealRuSetup
             }
         }
 
-        public static Bitmap CreateOfflineAchievementMedal(int sizePx, bool unlocked)
-        {
-            Bitmap bmp = new Bitmap(sizePx, sizePx);
-            using (Graphics g = Graphics.FromImage(bmp))
-            {
-                g.SmoothingMode = SmoothingMode.AntiAlias;
-                Color bg = unlocked ? Color.FromArgb(0x13, 0x27, 0x20) : Color.FromArgb(0x14, 0x1C, 0x24);
-                Color outerBorder = unlocked ? EmeraldPrimary : Color.FromArgb(0x2D, 0x3C, 0x4B);
-                Color starFill = unlocked ? GoldAccent : Color.FromArgb(0x43, 0x54, 0x66);
-                Color ringColor = unlocked ? Color.FromArgb(140, EmeraldPrimary) : Color.FromArgb(90, 0x3A, 0x4B, 0x5C);
-
-                DrawCard(g, new Rectangle(0, 0, sizePx, sizePx), bg, outerBorder, Math.Max(4, sizePx / 8));
-
-                float cx = sizePx * 0.5f;
-                float cy = sizePx * 0.5f;
-                float ringR = sizePx * 0.34f;
-                using (Pen ringPen = new Pen(ringColor, Math.Max(1.2f, sizePx * 0.03f)))
-                {
-                    g.DrawEllipse(ringPen, cx - ringR, cy - ringR, ringR * 2f, ringR * 2f);
-                }
-
-                PointF[] star = BuildFivePointStar(cx, cy, sizePx * 0.24f, sizePx * 0.105f);
-                using (SolidBrush sb = new SolidBrush(starFill))
-                {
-                    g.FillPolygon(sb, star);
-                }
-            }
-            return bmp;
-        }
-
-        private static PointF[] BuildFivePointStar(float cx, float cy, float outerR, float innerR)
-        {
-            PointF[] pts = new PointF[10];
-            double angle = -Math.PI / 2.0;
-            double step = Math.PI / 5.0;
-            for (int i = 0; i < 10; i++)
-            {
-                float r = (i % 2 == 0) ? outerR : innerR;
-                pts[i] = new PointF(
-                    cx + (float)(Math.Cos(angle) * r),
-                    cy + (float)(Math.Sin(angle) * r));
-                angle += step;
-            }
-            return pts;
-        }
     }
 
     internal sealed class TacticalButton : Control
@@ -3653,7 +2944,7 @@ namespace ZombiesArentRealRuSetup
             StartPosition = FormStartPosition.CenterScreen;
             BackColor = TacticalTheme.BgDeep;
             ForeColor = TacticalTheme.TextPrimary;
-            Text = "Zombies Aren't Real — Русификатор v1.1";
+            Text = "Zombies Aren't Real — Русификатор v1.2";
             ClientSize = new Size(S(728), S(414));
 
             _winIcon = TacticalTheme.CreateWindowIcon();
@@ -3900,6 +3191,7 @@ namespace ZombiesArentRealRuSetup
                 _statusBadgeBorder = TacticalTheme.BorderCrisp;
             }
 
+            _installBtn.Text = installed ? "Обновить русификатор" : "Установить русификатор";
             _installBtn.Enabled = !_isBusy && validGame;
             _uninstallBtn.Enabled = !_isBusy && hasBackup;
             _browseBtn.Enabled = !_isBusy;
@@ -3986,7 +3278,7 @@ namespace ZombiesArentRealRuSetup
             {
                 return;
             }
-            if (!skipUacRelaunch && (ElevationHelper.NeedsElevationForGameDir(gameDir) || NeedsSchemaElevationForUninstall(gameDir, steamDir)))
+            if (!skipUacRelaunch && (ElevationHelper.NeedsElevationForGameDir(gameDir)))
             {
                 TryElevateAndClose("--uac-uninstall", gameDir, steamDir);
                 return;
@@ -4025,34 +3317,6 @@ namespace ZombiesArentRealRuSetup
                 MessageBox.Show(this, ex.Message, "Игра запущена", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
-        }
-
-        private static bool NeedsSchemaElevationForUninstall(string gameDir, string steamDir)
-        {
-            try
-            {
-                string manifestPath = BackupManifestStore.GetManifestPath(gameDir);
-                if (!SteamLocator.SafeFileExists(manifestPath))
-                {
-                    return false;
-                }
-                BackupManifestData m = BackupManifestStore.Load(manifestPath);
-                for (int i = 0; i < m.Files.Count; i++)
-                {
-                    if (string.Equals(m.Files[i].TargetKind, "steam_schema", StringComparison.OrdinalIgnoreCase))
-                    {
-                        string statsDir = SteamLocator.ResolveSteamStatsDirectory(steamDir);
-                        string target = !string.IsNullOrEmpty(statsDir)
-                            ? Path.Combine(statsDir, SteamLocator.SchemaFileName)
-                            : m.SteamSchemaSourcePath;
-                        return ElevationHelper.NeedsElevationForTargetFile(target);
-                    }
-                }
-            }
-            catch
-            {
-            }
-            return false;
         }
 
         private bool TryElevateAndClose(string modeFlag, string gameDir, string steamDir)
@@ -4097,21 +3361,6 @@ namespace ZombiesArentRealRuSetup
                 AppendLog("ОШИБКА: " + failure.Message);
                 MessageBox.Show(this, failure.Message, "Ошибка операции", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
-            }
-            if (isInstall && !string.IsNullOrEmpty(skippedSchema) && !skipUacRelaunch && !ElevationHelper.IsProcessElevated())
-            {
-                DialogResult ask = MessageBox.Show(
-                    this,
-                    "Текст и шрифты игры установлены полностью!\n\nПапка клиента Steam защищена от записи:\n"
-                        + skippedSchema
-                        + "\n\nПерезапустить установщик от имени администратора, чтобы перевести всплывающие достижения в самом Steam?",
-                    "Перевод достижений Steam",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Question);
-                if (ask == DialogResult.Yes)
-                {
-                    TryElevateAndClose("--uac-install", gameDir, steamDir);
-                }
             }
         }
 
@@ -4222,7 +3471,7 @@ namespace ZombiesArentRealRuSetup
 
             TextRenderer.DrawText(
                 g,
-                "Русификатор текста, шрифтов и достижений",
+                "Текст и шрифты для версии игры 0.43.1",
                 _fontSub,
                 new Point(textX, _headerRect.Y + S(46)),
                 TacticalTheme.TextSecondary,
@@ -4296,7 +3545,7 @@ namespace ZombiesArentRealRuSetup
             Rectangle leftFooter = new Rectangle(S(22), S(372), S(260), S(28));
             TextRenderer.DrawText(
                 g,
-                "v1.1 · neoru-droid",
+                "v1.2 · neoru-droid",
                 _fontSmall,
                 leftFooter,
                 TacticalTheme.TextDim,
@@ -4322,726 +3571,4 @@ namespace ZombiesArentRealRuSetup
         }
     }
 
-    internal sealed class AchievementsForm : Form
-    {
-        private const string SteamCdnPrefix = "https://shared.fastly.steamstatic.com/community_assets/images/apps/5185890/";
-
-        private readonly PayloadData _payload;
-        private readonly string _steamDir;
-        private readonly bool _standaloneMode;
-        private readonly string _appBaseDir;
-        private readonly string _explicitGameDir;
-        private readonly float _scale;
-
-        private readonly object _iconLock = new object();
-        private readonly Dictionary<string, Bitmap> _downloadedIcons = new Dictionary<string, Bitmap>(StringComparer.OrdinalIgnoreCase);
-        private readonly HashSet<string> _inFlightIcons = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        private Bitmap _offlineUnlockedMedal;
-        private Bitmap _offlineLockedMedal;
-        private Icon _winIcon;
-
-        private Font _fontHeader;
-        private Font _fontPct;
-        private Font _fontBtn;
-        private Font _fontCardTitle;
-        private Font _fontCardDesc;
-        private Font _fontBadge;
-        private Font _fontFooter;
-
-        private Rectangle _summaryRect;
-        private ComboBox _profileSelector;
-        private TacticalButton _refreshBtn;
-        private TacticalButton _openSetupBtn;
-        private AchievementScrollPanel _scrollPanel;
-
-        private List<UserAchievementProfile> _profiles = new List<UserAchievementProfile>();
-        private UserAchievementProfile _activeProfile;
-        private int _unlockedCount;
-
-        public AchievementsForm(PayloadData payload, string steamDir, bool standaloneMode, string appBaseDir, string explicitGameDir)
-        {
-            _payload = payload;
-            _steamDir = steamDir;
-            _standaloneMode = standaloneMode;
-            _appBaseDir = appBaseDir;
-            _explicitGameDir = explicitGameDir;
-
-            SetStyle(
-                ControlStyles.AllPaintingInWmPaint
-                | ControlStyles.OptimizedDoubleBuffer
-                | ControlStyles.ResizeRedraw
-                | ControlStyles.UserPaint,
-                true);
-
-            AutoScaleMode = AutoScaleMode.Dpi;
-            _scale = TacticalTheme.DetectDpiScale(this);
-
-            FormBorderStyle = FormBorderStyle.FixedSingle;
-            MaximizeBox = false;
-            StartPosition = FormStartPosition.Manual;
-            BackColor = TacticalTheme.BgDeep;
-            ForeColor = TacticalTheme.TextPrimary;
-
-            Rectangle workArea = Screen.PrimaryScreen != null
-                ? Screen.PrimaryScreen.WorkingArea
-                : new Rectangle(0, 0, S(1280), S(800));
-            int targetClientW = Math.Max(S(520), Math.Min(S(760), workArea.Width - S(48)));
-            int targetClientH = Math.Max(S(420), Math.Min(S(600), workArea.Height - S(80)));
-            ClientSize = new Size(targetClientW, targetClientH);
-
-            _winIcon = TacticalTheme.CreateWindowIcon();
-            if (_winIcon != null)
-            {
-                Icon = _winIcon;
-            }
-
-            int iconPx = S(64);
-            _offlineUnlockedMedal = TacticalTheme.CreateOfflineAchievementMedal(iconPx, true);
-            _offlineLockedMedal = TacticalTheme.CreateOfflineAchievementMedal(iconPx, false);
-
-            InitFonts();
-            BuildControls();
-            ReloadStatsAndRender();
-            TacticalTheme.ClampWindowToWorkingArea(this, S(12), true);
-        }
-
-        protected override void OnLoad(EventArgs e)
-        {
-            base.OnLoad(e);
-            TacticalTheme.ClampWindowToWorkingArea(this, S(12), true);
-            UpdateResponsiveLayout();
-        }
-
-        protected override void OnShown(EventArgs e)
-        {
-            base.OnShown(e);
-            TacticalTheme.EnsureWithinWorkingArea(this, S(12), true);
-            UpdateResponsiveLayout();
-        }
-
-        protected override void OnResize(EventArgs e)
-        {
-            base.OnResize(e);
-            UpdateResponsiveLayout();
-        }
-
-        private int S(int px)
-        {
-            return (int)Math.Round(px * _scale);
-        }
-
-        private void InitFonts()
-        {
-            _fontHeader = new Font("Segoe UI", S(18), FontStyle.Bold, GraphicsUnit.Pixel);
-            _fontPct = new Font("Segoe UI", S(12), FontStyle.Bold, GraphicsUnit.Pixel);
-            _fontBtn = new Font("Segoe UI", S(13), FontStyle.Bold, GraphicsUnit.Pixel);
-            _fontCardTitle = new Font("Segoe UI", S(14), FontStyle.Bold, GraphicsUnit.Pixel);
-            _fontCardDesc = new Font("Segoe UI", S(12), FontStyle.Regular, GraphicsUnit.Pixel);
-            _fontBadge = new Font("Segoe UI", S(11), FontStyle.Bold, GraphicsUnit.Pixel);
-            _fontFooter = new Font("Segoe UI", S(11), FontStyle.Regular, GraphicsUnit.Pixel);
-        }
-
-        private void BuildControls()
-        {
-            _refreshBtn = new TacticalButton();
-            _refreshBtn.Text = "Обновить";
-            _refreshBtn.Font = _fontBtn;
-            _refreshBtn.CornerRadius = S(6);
-            _refreshBtn.SurfaceBehind = TacticalTheme.CardSurface;
-            _refreshBtn.Click += delegate { ReloadStatsAndRender(); };
-            Controls.Add(_refreshBtn);
-
-            _profileSelector = new ComboBox();
-            _profileSelector.DropDownStyle = ComboBoxStyle.DropDownList;
-            _profileSelector.BackColor = TacticalTheme.RecessedBg;
-            _profileSelector.ForeColor = TacticalTheme.TextPrimary;
-            _profileSelector.FlatStyle = FlatStyle.Flat;
-            _profileSelector.Font = _fontFooter;
-            _profileSelector.Visible = false;
-            _profileSelector.SelectedIndexChanged += OnProfileChanged;
-            Controls.Add(_profileSelector);
-
-            _scrollPanel = new AchievementScrollPanel(this, _scale);
-            Controls.Add(_scrollPanel);
-
-            if (_standaloneMode)
-            {
-                _openSetupBtn = new TacticalButton();
-                _openSetupBtn.Text = "Открыть установщик";
-                _openSetupBtn.Font = _fontFooter;
-                _openSetupBtn.IsSubtleLink = true;
-                _openSetupBtn.CornerRadius = S(5);
-                _openSetupBtn.Click += OnOpenSetupClicked;
-                Controls.Add(_openSetupBtn);
-            }
-
-            UpdateResponsiveLayout();
-        }
-
-        private void UpdateResponsiveLayout()
-        {
-            if (_refreshBtn == null || _scrollPanel == null || ClientSize.Width <= 0 || ClientSize.Height <= 0)
-            {
-                return;
-            }
-
-            int pad = S(20);
-            int contentW = Math.Max(S(320), ClientSize.Width - pad * 2);
-            _summaryRect = new Rectangle(pad, S(16), contentW, S(94));
-
-            int refreshW = S(118);
-            int refreshH = S(34);
-            int refreshX = _summaryRect.Right - S(16) - refreshW;
-            int refreshY = _summaryRect.Y + S(14);
-            _refreshBtn.Bounds = new Rectangle(refreshX, refreshY, refreshW, refreshH);
-
-            if (_profileSelector != null)
-            {
-                _profileSelector.Bounds = new Rectangle(refreshX - S(210), refreshY + S(3), S(200), S(28));
-            }
-
-            int listTop = _summaryRect.Bottom + S(12);
-            int footerH = S(42);
-            int listH = Math.Max(S(80), ClientSize.Height - listTop - footerH);
-            _scrollPanel.Bounds = new Rectangle(pad, listTop, contentW, listH);
-
-            if (_openSetupBtn != null)
-            {
-                int setupBtnW = S(176);
-                _openSetupBtn.Bounds = new Rectangle(ClientSize.Width - pad - setupBtnW, ClientSize.Height - S(36), setupBtnW, S(28));
-            }
-
-            Invalidate();
-        }
-
-        private void OnOpenSetupClicked(object sender, EventArgs e)
-        {
-            Hide();
-            using (SetupForm setup = new SetupForm(_payload, _appBaseDir, _explicitGameDir, _steamDir))
-            {
-                setup.ShowDialog();
-            }
-            Close();
-        }
-
-        private void OnProfileChanged(object sender, EventArgs e)
-        {
-            int idx = _profileSelector.SelectedIndex;
-            if (idx >= 0 && idx < _profiles.Count)
-            {
-                _activeProfile = _profiles[idx];
-                ApplyActiveProfile();
-            }
-        }
-
-        private void ReloadStatsAndRender()
-        {
-            _profiles = SteamUserStatsReader.LoadProfiles(_steamDir, _payload.Achievements.Count);
-            if (_profiles.Count > 1)
-            {
-                _profileSelector.BeginUpdate();
-                _profileSelector.Items.Clear();
-                for (int i = 0; i < _profiles.Count; i++)
-                {
-                    _profileSelector.Items.Add(_profiles[i].ProfileLabel);
-                }
-                _profileSelector.SelectedIndex = 0;
-                _profileSelector.EndUpdate();
-                _profileSelector.Visible = true;
-                _activeProfile = _profiles[0];
-            }
-            else
-            {
-                _profileSelector.Visible = false;
-                _activeProfile = _profiles.Count == 1 ? _profiles[0] : null;
-            }
-
-            ApplyActiveProfile();
-        }
-
-        private void ApplyActiveProfile()
-        {
-            _unlockedCount = _activeProfile != null ? _activeProfile.UnlockedCount : 0;
-            int total = _payload.Achievements.Count;
-            Text = string.Format(CultureInfo.InvariantCulture, "Достижения ({0} / {1}) — Zombies Aren't Real", _unlockedCount, total);
-
-            List<AchievementRowModel> rows = BuildOrderedRowModels();
-            _scrollPanel.SetRows(rows);
-            Invalidate();
-
-            QueueMissingIconDownloads(rows);
-        }
-
-        private List<AchievementRowModel> BuildOrderedRowModels()
-        {
-            List<AchievementRowModel> unlockedList = new List<AchievementRowModel>();
-            List<AchievementRowModel> lockedList = new List<AchievementRowModel>();
-
-            for (int i = 0; i < _payload.Achievements.Count; i++)
-            {
-                AchievementDefinition def = _payload.Achievements[i];
-                bool isUnlocked = _activeProfile != null && _activeProfile.IsUnlocked(def.Bit);
-                AchievementRowModel row = new AchievementRowModel();
-                row.Def = def;
-                row.Unlocked = isUnlocked;
-                row.StatusText = _activeProfile != null ? _activeProfile.FormatUnlockStatus(def.Bit) : "Не получено";
-                row.IconFileName = isUnlocked ? def.IconUnlocked : def.IconLocked;
-
-                if (isUnlocked)
-                {
-                    unlockedList.Add(row);
-                }
-                else
-                {
-                    lockedList.Add(row);
-                }
-            }
-
-            unlockedList.AddRange(lockedList);
-            return unlockedList;
-        }
-
-        internal Bitmap ResolveAchievementIcon(string iconFileName, bool unlocked)
-        {
-            if (!string.IsNullOrEmpty(iconFileName))
-            {
-                lock (_iconLock)
-                {
-                    Bitmap cached;
-                    if (_downloadedIcons.TryGetValue(iconFileName, out cached) && cached != null)
-                    {
-                        return cached;
-                    }
-                }
-            }
-            return unlocked ? _offlineUnlockedMedal : _offlineLockedMedal;
-        }
-
-        internal Font CardTitleFont { get { return _fontCardTitle; } }
-        internal Font CardDescFont { get { return _fontCardDesc; } }
-        internal Font CardBadgeFont { get { return _fontBadge; } }
-
-        private void QueueMissingIconDownloads(List<AchievementRowModel> rows)
-        {
-            int targetPx = S(64);
-            for (int i = 0; i < rows.Count; i++)
-            {
-                string fileName = rows[i].IconFileName;
-                if (string.IsNullOrEmpty(fileName))
-                {
-                    continue;
-                }
-                bool shouldStart = false;
-                lock (_iconLock)
-                {
-                    if (!_downloadedIcons.ContainsKey(fileName) && !_inFlightIcons.Contains(fileName))
-                    {
-                        _inFlightIcons.Add(fileName);
-                        shouldStart = true;
-                    }
-                }
-                if (shouldStart)
-                {
-                    string capturedName = fileName;
-                    ThreadPool.QueueUserWorkItem(delegate
-                    {
-                        FetchSingleIconAsync(capturedName, targetPx);
-                    });
-                }
-            }
-        }
-
-        private void FetchSingleIconAsync(string iconFileName, int targetPx)
-        {
-            Bitmap scaledBmp = null;
-            try
-            {
-                HttpWebRequest req = (HttpWebRequest)WebRequest.Create(SteamCdnPrefix + iconFileName);
-                req.Method = "GET";
-                req.Timeout = 4500;
-                req.ReadWriteTimeout = 4500;
-                req.UserAgent = "ZombiesArentReal-RU-Setup/1.1";
-
-                using (HttpWebResponse resp = (HttpWebResponse)req.GetResponse())
-                using (Stream netStream = resp.GetResponseStream())
-                using (MemoryStream ms = new MemoryStream())
-                {
-                    if (netStream != null)
-                    {
-                        netStream.CopyTo(ms);
-                        ms.Position = 0;
-                        using (Image srcImg = Image.FromStream(ms))
-                        {
-                            scaledBmp = new Bitmap(targetPx, targetPx);
-                            using (Graphics g = Graphics.FromImage(scaledBmp))
-                            {
-                                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                                g.SmoothingMode = SmoothingMode.AntiAlias;
-                                g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-                                g.DrawImage(srcImg, new Rectangle(0, 0, targetPx, targetPx));
-                            }
-                        }
-                    }
-                }
-            }
-            catch
-            {
-                if (scaledBmp != null)
-                {
-                    scaledBmp.Dispose();
-                    scaledBmp = null;
-                }
-            }
-
-            lock (_iconLock)
-            {
-                _inFlightIcons.Remove(iconFileName);
-                if (scaledBmp != null)
-                {
-                    if (IsDisposed)
-                    {
-                        scaledBmp.Dispose();
-                        return;
-                    }
-                    Bitmap old;
-                    if (_downloadedIcons.TryGetValue(iconFileName, out old) && old != null)
-                    {
-                        old.Dispose();
-                    }
-                    _downloadedIcons[iconFileName] = scaledBmp;
-                }
-            }
-
-            if (scaledBmp != null && !IsDisposed && IsHandleCreated)
-            {
-                try
-                {
-                    BeginInvoke((MethodInvoker)delegate
-                    {
-                        if (!IsDisposed && _scrollPanel != null && !_scrollPanel.IsDisposed)
-                        {
-                            _scrollPanel.Invalidate();
-                        }
-                    });
-                }
-                catch
-                {
-                }
-            }
-        }
-
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            base.OnPaint(e);
-            Graphics g = e.Graphics;
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
-
-            TacticalTheme.DrawCard(g, _summaryRect, TacticalTheme.CardSurface, TacticalTheme.BorderCrisp, S(8));
-
-            int total = Math.Max(1, _payload.Achievements.Count);
-            string summaryTitle = string.Format(
-                CultureInfo.InvariantCulture,
-                "Открыто {0} из {1} достижений",
-                _unlockedCount,
-                _payload.Achievements.Count);
-            Point titlePos = new Point(_summaryRect.X + S(18), _summaryRect.Y + S(17));
-            TextRenderer.DrawText(g, summaryTitle, _fontHeader, titlePos, TacticalTheme.TextPrimary, TextFormatFlags.NoPrefix);
-
-            Size titleSz = TextRenderer.MeasureText(g, summaryTitle, _fontHeader, new Size(S(420), S(36)), TextFormatFlags.NoPrefix);
-            int pct = (int)Math.Round((_unlockedCount * 100.0) / total);
-            string pctText = pct.ToString(CultureInfo.InvariantCulture) + "%";
-            Size pctSz = TextRenderer.MeasureText(g, pctText, _fontPct, new Size(S(90), S(28)), TextFormatFlags.NoPrefix);
-            Rectangle pctPill = new Rectangle(
-                titlePos.X + titleSz.Width + S(8),
-                _summaryRect.Y + S(19),
-                pctSz.Width + S(16),
-                S(24));
-            TacticalTheme.DrawCard(g, pctPill, TacticalTheme.EmeraldPillBg, TacticalTheme.BorderEmerald, S(12));
-            TextRenderer.DrawText(
-                g,
-                pctText,
-                _fontPct,
-                pctPill,
-                TacticalTheme.EmeraldPrimary,
-                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
-
-            // Progress Bar
-            Rectangle barTrack = new Rectangle(
-                _summaryRect.X + S(18),
-                _summaryRect.Y + S(60),
-                _summaryRect.Width - S(36),
-                S(16));
-            TacticalTheme.DrawCard(g, barTrack, TacticalTheme.RecessedBg, TacticalTheme.BorderCrisp, S(8));
-
-            if (_unlockedCount > 0)
-            {
-                int innerMax = barTrack.Width - 2;
-                int fillW = Math.Max(S(14), (int)Math.Round(innerMax * (_unlockedCount / (double)total)));
-                fillW = Math.Min(innerMax, fillW);
-                Rectangle fillRect = new Rectangle(barTrack.X + 1, barTrack.Y + 1, fillW, barTrack.Height - 2);
-                using (GraphicsPath fillPath = TacticalTheme.CreateRoundedRect(fillRect, S(7)))
-                using (LinearGradientBrush grad = new LinearGradientBrush(
-                    fillRect,
-                    Color.FromArgb(0x23, 0xA8, 0x59),
-                    TacticalTheme.EmeraldPrimary,
-                    LinearGradientMode.Horizontal))
-                {
-                    g.FillPath(grad, fillPath);
-                }
-            }
-
-            // Footer note
-            int footerRightLimit = (_openSetupBtn != null && _openSetupBtn.Visible)
-                ? (_openSetupBtn.Left - S(12))
-                : (ClientSize.Width - S(22));
-            int footerW = Math.Max(S(160), footerRightLimit - S(22));
-            Rectangle footerRect = new Rectangle(S(22), ClientSize.Height - S(36), footerW, S(28));
-            string footerHint = !string.IsNullOrEmpty(_steamDir)
-                ? "Данные синхронизируются с локальным кэшем достижений Steam в реальном времени."
-                : "Кэш Steam не обнаружен — показан полный справочник достижений на русском языке.";
-            TextRenderer.DrawText(
-                g,
-                footerHint,
-                _fontFooter,
-                footerRect,
-                TacticalTheme.TextDim,
-                TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                lock (_iconLock)
-                {
-                    foreach (KeyValuePair<string, Bitmap> kv in _downloadedIcons)
-                    {
-                        if (kv.Value != null)
-                        {
-                            kv.Value.Dispose();
-                        }
-                    }
-                    _downloadedIcons.Clear();
-                }
-                if (_offlineUnlockedMedal != null) _offlineUnlockedMedal.Dispose();
-                if (_offlineLockedMedal != null) _offlineLockedMedal.Dispose();
-                if (_winIcon != null) _winIcon.Dispose();
-                if (_fontHeader != null) _fontHeader.Dispose();
-                if (_fontPct != null) _fontPct.Dispose();
-                if (_fontBtn != null) _fontBtn.Dispose();
-                if (_fontCardTitle != null) _fontCardTitle.Dispose();
-                if (_fontCardDesc != null) _fontCardDesc.Dispose();
-                if (_fontBadge != null) _fontBadge.Dispose();
-                if (_fontFooter != null) _fontFooter.Dispose();
-            }
-            base.Dispose(disposing);
-        }
-    }
-
-    internal sealed class AchievementRowModel
-    {
-        public AchievementDefinition Def;
-        public bool Unlocked;
-        public string StatusText;
-        public string IconFileName;
-        public int TopY;
-        public int CardHeight;
-    }
-
-    internal sealed class AchievementScrollPanel : Panel
-    {
-        private readonly AchievementsForm _owner;
-        private readonly float _scale;
-        private List<AchievementRowModel> _rows = new List<AchievementRowModel>();
-
-        public AchievementScrollPanel(AchievementsForm owner, float scale)
-        {
-            _owner = owner;
-            _scale = scale;
-            SetStyle(
-                ControlStyles.AllPaintingInWmPaint
-                | ControlStyles.OptimizedDoubleBuffer
-                | ControlStyles.ResizeRedraw
-                | ControlStyles.UserPaint,
-                true);
-            AutoScroll = true;
-            BackColor = TacticalTheme.BgDeep;
-        }
-
-        private int S(int px)
-        {
-            return (int)Math.Round(px * _scale);
-        }
-
-        public void SetRows(List<AchievementRowModel> rows)
-        {
-            _rows = rows ?? new List<AchievementRowModel>();
-            RecalculateRowGeometry();
-            Invalidate();
-        }
-
-        protected override void OnSizeChanged(EventArgs e)
-        {
-            base.OnSizeChanged(e);
-            RecalculateRowGeometry();
-        }
-
-        protected override void OnScroll(ScrollEventArgs se)
-        {
-            base.OnScroll(se);
-            Invalidate();
-        }
-
-        protected override void OnMouseWheel(MouseEventArgs e)
-        {
-            base.OnMouseWheel(e);
-            Invalidate();
-        }
-
-        private void RecalculateRowGeometry()
-        {
-            if (_rows == null || _rows.Count == 0 || Width <= 0)
-            {
-                AutoScrollMinSize = Size.Empty;
-                return;
-            }
-
-            int scrollReserve = SystemInformation.VerticalScrollBarWidth + S(6);
-            int cardW = Math.Max(S(320), Width - scrollReserve);
-            int descWidth = Math.Max(S(180), cardW - S(64) - S(42));
-            int minCardH = S(84);
-            int gap = S(8);
-            int currentY = 0;
-
-            using (Graphics g = CreateGraphics())
-            {
-                for (int i = 0; i < _rows.Count; i++)
-                {
-                    AchievementRowModel r = _rows[i];
-                    Size descSz = TextRenderer.MeasureText(
-                        g,
-                        r.Def.DescRu,
-                        _owner.CardDescFont,
-                        new Size(descWidth, S(200)),
-                        TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
-                    int neededH = S(38) + descSz.Height + S(12);
-                    r.TopY = currentY;
-                    r.CardHeight = Math.Max(minCardH, neededH);
-                    currentY += r.CardHeight + gap;
-                }
-            }
-
-            AutoScrollMinSize = new Size(0, Math.Max(0, currentY - gap + S(4)));
-        }
-
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            Graphics g = e.Graphics;
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
-            g.Clear(TacticalTheme.BgDeep);
-
-            if (_rows == null || _rows.Count == 0)
-            {
-                return;
-            }
-
-            int scrollY = AutoScrollPosition.Y;
-            bool vScrollVisible = VerticalScroll.Visible;
-            int cardW = vScrollVisible
-                ? Math.Max(S(300), ClientSize.Width - S(4))
-                : ClientSize.Width;
-
-            int iconSize = S(64);
-            for (int i = 0; i < _rows.Count; i++)
-            {
-                AchievementRowModel row = _rows[i];
-                int y = row.TopY + scrollY;
-                if (y + row.CardHeight < -S(10) || y > ClientSize.Height + S(10))
-                {
-                    continue;
-                }
-
-                Rectangle cardRect = new Rectangle(0, y, cardW, row.CardHeight);
-                Color surface = row.Unlocked ? TacticalTheme.CardSurface : TacticalTheme.CardLocked;
-                Color border = row.Unlocked ? TacticalTheme.BorderEmerald : TacticalTheme.BorderLocked;
-                TacticalTheme.DrawCard(g, cardRect, surface, border, S(7));
-
-                if (row.Unlocked)
-                {
-                    using (SolidBrush accentBar = new SolidBrush(TacticalTheme.EmeraldPrimary))
-                    {
-                        g.FillRectangle(accentBar, cardRect.X + 1, cardRect.Y + S(7), S(3), cardRect.Height - S(14));
-                    }
-                }
-
-                int iconX = cardRect.X + S(12);
-                int iconY = cardRect.Y + (cardRect.Height - iconSize) / 2;
-                Rectangle iconRect = new Rectangle(iconX, iconY, iconSize, iconSize);
-
-                Bitmap bmp = _owner.ResolveAchievementIcon(row.IconFileName, row.Unlocked);
-                if (bmp != null)
-                {
-                    using (GraphicsPath clipPath = TacticalTheme.CreateRoundedRect(iconRect, S(6)))
-                    {
-                        GraphicsState st = g.Save();
-                        g.SetClip(clipPath);
-                        g.DrawImage(bmp, iconRect);
-                        g.Restore(st);
-                    }
-                    using (GraphicsPath borderPath = TacticalTheme.CreateRoundedRect(
-                        new Rectangle(iconRect.X, iconRect.Y, iconRect.Width - 1, iconRect.Height - 1), S(6)))
-                    using (Pen iconPen = new Pen(row.Unlocked ? TacticalTheme.BorderEmerald : TacticalTheme.BorderCrisp, 1f))
-                    {
-                        g.DrawPath(iconPen, borderPath);
-                    }
-                }
-
-                // Status badge at top-right of card
-                Size badgeSz = TextRenderer.MeasureText(g, row.StatusText, _owner.CardBadgeFont, new Size(S(260), S(26)), TextFormatFlags.NoPrefix);
-                int pillW = badgeSz.Width + S(18);
-                int pillH = S(22);
-                Rectangle badgeRect = new Rectangle(
-                    cardRect.Right - S(12) - pillW,
-                    cardRect.Y + S(10),
-                    pillW,
-                    pillH);
-                Color badgeBg = row.Unlocked ? TacticalTheme.EmeraldPillBg : TacticalTheme.RecessedBg;
-                Color badgeBorder = row.Unlocked ? TacticalTheme.BorderEmerald : TacticalTheme.BorderLocked;
-                Color badgeFg = row.Unlocked ? TacticalTheme.EmeraldPrimary : TacticalTheme.TextDim;
-                TacticalTheme.DrawCard(g, badgeRect, badgeBg, badgeBorder, S(11));
-                TextRenderer.DrawText(
-                    g,
-                    row.StatusText,
-                    _owner.CardBadgeFont,
-                    badgeRect,
-                    badgeFg,
-                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
-
-                int textLeft = iconRect.Right + S(14);
-                int titleMaxW = Math.Max(S(120), badgeRect.Left - textLeft - S(10));
-                Rectangle titleRect = new Rectangle(textLeft, cardRect.Y + S(10), titleMaxW, S(24));
-                Color titleColor = row.Unlocked ? TacticalTheme.TextPrimary : Color.FromArgb(0x9A, 0xAC, 0xBE);
-                TextRenderer.DrawText(
-                    g,
-                    row.Def.NameRu,
-                    _owner.CardTitleFont,
-                    titleRect,
-                    titleColor,
-                    TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
-
-                int descMaxW = Math.Max(S(160), cardRect.Right - S(14) - textLeft);
-                Rectangle descRect = new Rectangle(textLeft, cardRect.Y + S(36), descMaxW, cardRect.Height - S(44));
-                Color descColor = row.Unlocked ? TacticalTheme.TextSecondary : TacticalTheme.TextDim;
-                TextRenderer.DrawText(
-                    g,
-                    row.Def.DescRu,
-                    _owner.CardDescFont,
-                    descRect,
-                    descColor,
-                    TextFormatFlags.Left | TextFormatFlags.Top | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
-            }
-        }
-    }
 }

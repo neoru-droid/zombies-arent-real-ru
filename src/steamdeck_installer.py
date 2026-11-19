@@ -63,55 +63,11 @@ KV_FIXED_WIDTHS: dict[int, int] = {0x02: 4, 0x03: 4, 0x04: 4, 0x06: 4, 0x07: 8, 
 
 
 @dataclass(frozen=True)
-class AchievementDef:
-    bit: int
-    ach_id: str
-    name_ru: str
-    desc_ru: str
-    icon_unlocked: str = ""
-    icon_locked: str = ""
-
-
-@dataclass(frozen=True)
 class PayloadBundle:
     version: str
     app_id: int
     lang: dict[str, str]
-    achievements: tuple[AchievementDef, ...]
     fonts: dict[str, bytes]
-
-
-@dataclass
-class RawKvEntry:
-    tag: int
-    raw_key: bytes
-    children: list[RawKvEntry] = field(default_factory=list)
-    raw_bytes: bytes = b""
-
-    @property
-    def key(self) -> str:
-        return self.raw_key.decode("utf-8", errors="replace")
-
-
-@dataclass
-class UserProfileProgress:
-    path: Path
-    mtime: float
-    bitmask: int
-    unlock_times: dict[int, int]
-    unlocked_count: int
-
-    def is_unlocked(self, bit: int) -> bool:
-        return 0 <= bit < 32 and bool((self.bitmask >> bit) & 1)
-
-    def format_status(self, bit: int, *, tz: Any = None) -> str:
-        if not self.is_unlocked(bit):
-            return "Не получено"
-        unix_ts = self.unlock_times.get(bit, 0)
-        if unix_ts > 0:
-            dt = datetime.fromtimestamp(unix_ts, tz=timezone.utc).astimezone(tz)
-            return f"Открыто {dt.strftime('%d.%m.%Y в %H:%M')}"
-        return "Открыто в Steam"
 
 
 @dataclass
@@ -159,26 +115,10 @@ def _normalize_rel_slashes(rel: str) -> str:
     return rel.replace("\\", "/")
 
 
-def _parse_achievement_defs(raw_list: list[dict[str, Any]]) -> tuple[AchievementDef, ...]:
-    items = [
-        AchievementDef(
-            bit=int(item["bit"]),
-            ach_id=str(item.get("id", "")),
-            name_ru=str(item.get("name_ru", "")),
-            desc_ru=str(item.get("desc_ru", "")),
-            icon_unlocked=str(item.get("icon_unlocked", "")),
-            icon_locked=str(item.get("icon_locked", "")),
-        )
-        for item in raw_list
-    ]
-    items.sort(key=lambda a: a.bit)
-    return tuple(items)
-
-
 def _bundle_from_dict(root: dict[str, Any]) -> PayloadBundle | None:
     if root.get("app_id") != TARGET_APP_ID:
         return None
-    if not {"lang", "achievements", "fonts"}.issubset(root):
+    if not {"lang", "fonts"}.issubset(root):
         return None
     fonts = {
         str(name): base64.b64decode(b64_str)
@@ -189,7 +129,6 @@ def _bundle_from_dict(root: dict[str, Any]) -> PayloadBundle | None:
         version=str(root.get("version", "1.1.0")),
         app_id=TARGET_APP_ID,
         lang=lang_map,
-        achievements=_parse_achievement_defs(list(root["achievements"])),
         fonts=fonts,
     )
 
@@ -219,9 +158,8 @@ def extract_payload_from_bytes(raw: bytes) -> PayloadBundle:
 
 def _load_payload_from_data_dir(data_dir: Path) -> PayloadBundle | None:
     lang_json = data_dir / "ru_translations.json"
-    ach_json = data_dir / "achievements_ru.json"
     fonts_dir = data_dir / "fonts"
-    if not (lang_json.is_file() and ach_json.is_file() and fonts_dir.is_dir()):
+    if not (lang_json.is_file() and fonts_dir.is_dir()):
         return None
     fonts_b64 = {
         fname: base64.b64encode((fonts_dir / fname).read_bytes()).decode("ascii")
@@ -232,10 +170,9 @@ def _load_payload_from_data_dir(data_dir: Path) -> PayloadBundle | None:
         return None
     return _bundle_from_dict(
         {
-            "version": "1.1.0",
+            "version": "1.2.0",
             "app_id": TARGET_APP_ID,
             "lang": json.loads(lang_json.read_text(encoding="utf-8")),
-            "achievements": json.loads(ach_json.read_text(encoding="utf-8")),
             "fonts": fonts_b64,
         }
     )
@@ -436,231 +373,6 @@ def assert_game_closed(proc_root: Path = Path("/proc")) -> None:
                 f"Игра Zombies Aren't Real сейчас запущена (PID {entry.name}). "
                 "Закройте игру перед установкой или возвратом оригинала."
             )
-
-
-def _read_until_nul(buf: bytes, pos: int) -> tuple[bytes, int]:
-    end = buf.find(0, pos)
-    if end < 0:
-        raise ValueError("Незакрытая UTF-8 строка в бинарном файле Valve KeyValues.")
-    return buf[pos:end], end + 1
-
-
-def _read_utf16_until_nul(buf: bytes, pos: int) -> tuple[bytes, int]:
-    cur = pos
-    while cur + 1 < len(buf):
-        if buf[cur] == 0 and buf[cur + 1] == 0:
-            return buf[pos:cur], cur + 2
-        cur += 2
-    raise ValueError("Незакрытая UTF-16 строка в бинарном файле Valve KeyValues.")
-
-
-def _parse_kv_payload(buf: bytes, pos: int, tag: int) -> tuple[list[RawKvEntry], bytes, int]:
-    if tag == KV_MAP:
-        children, next_pos = _parse_kv_entries(buf, pos, expect_end=True)
-        return children, b"", next_pos
-    if tag == KV_STR:
-        raw_str, next_pos = _read_until_nul(buf, pos)
-        return [], raw_str, next_pos
-    if tag == KV_WSTRING:
-        raw_ws, next_pos = _read_utf16_until_nul(buf, pos)
-        return [], raw_ws, next_pos
-    width = KV_FIXED_WIDTHS.get(tag)
-    if width is None or pos + width > len(buf):
-        raise ValueError(f"Некорректный тег Valve KeyValues {tag:#x} на смещении {pos}.")
-    return [], buf[pos : pos + width], pos + width
-
-
-def _parse_kv_entries(
-    buf: bytes, pos: int, *, expect_end: bool
-) -> tuple[list[RawKvEntry], int]:
-    items: list[RawKvEntry] = []
-    while pos < len(buf):
-        tag = buf[pos]
-        pos += 1
-        if tag == KV_END:
-            return items, pos
-        raw_key, pos = _read_until_nul(buf, pos)
-        children, raw_bytes, pos = _parse_kv_payload(buf, pos, tag)
-        items.append(RawKvEntry(tag=tag, raw_key=raw_key, children=children, raw_bytes=raw_bytes))
-    if expect_end:
-        raise ValueError("Незавершённая карта Valve KeyValues (нет маркера 0x08).")
-    return items, pos
-
-
-def parse_raw_kv(raw: bytes) -> tuple[list[RawKvEntry], bool]:
-    if not raw:
-        raise ValueError("Пустой бинарный файл Valve KeyValues.")
-    entries, pos = _parse_kv_entries(raw, 0, expect_end=False)
-    if pos != len(raw):
-        raise ValueError(f"Лишние байты в конце файла Valve KeyValues на позиции {pos}.")
-    return entries, (raw[-1] == KV_END)
-
-
-def _emit_kv_entry(out: bytearray, entry: RawKvEntry) -> None:
-    out.append(entry.tag)
-    out.extend(entry.raw_key)
-    out.append(0)
-    if entry.tag == KV_MAP:
-        for child in entry.children:
-            _emit_kv_entry(out, child)
-        out.append(KV_END)
-    elif entry.tag == KV_STR:
-        out.extend(entry.raw_bytes)
-        out.append(0)
-    elif entry.tag == KV_WSTRING:
-        out.extend(entry.raw_bytes)
-        out.extend(b"\x00\x00")
-    else:
-        out.extend(entry.raw_bytes)
-
-
-def serialize_raw_kv(entries: Sequence[RawKvEntry], has_root_end: bool = True) -> bytes:
-    out = bytearray()
-    for entry in entries:
-        _emit_kv_entry(out, entry)
-    if has_root_end:
-        out.append(KV_END)
-    return bytes(out)
-
-
-def _find_kv_entry(entries: Sequence[RawKvEntry], key: str, tag: int) -> RawKvEntry | None:
-    target = key.lower()
-    for item in entries:
-        if item.tag == tag and item.key.lower() == target:
-            return item
-    return None
-
-
-def _upsert_kv_string(entries: list[RawKvEntry], key: str, text: str) -> None:
-    encoded = text.encode("utf-8")
-    for item in entries:
-        if item.tag == KV_STR and item.key == key:
-            item.raw_bytes = encoded
-            return
-    created = RawKvEntry(tag=KV_STR, raw_key=key.encode("utf-8"), raw_bytes=encoded)
-    for idx, item in enumerate(entries):
-        if item.key == "english":
-            entries.insert(idx + 1, created)
-            return
-    entries.insert(0, created)
-
-
-def _entry_bits_children(stat_entry: RawKvEntry) -> list[RawKvEntry] | None:
-    if stat_entry.tag != KV_MAP:
-        return None
-    t_node = _find_kv_entry(stat_entry.children, "type", KV_STR)
-    is_ach = t_node is not None and t_node.raw_bytes.decode("utf-8", "ignore").upper() == "ACHIEVEMENTS"
-    if not (is_ach or stat_entry.key == "1"):
-        return None
-    bits = _find_kv_entry(stat_entry.children, "bits", KV_MAP)
-    return bits.children if bits is not None else None
-
-
-def _locate_achievement_bits(root_entries: Sequence[RawKvEntry]) -> list[RawKvEntry]:
-    if len(root_entries) != 1 or root_entries[0].tag != KV_MAP:
-        raise ValueError("Неожиданная корневая структура UserGameStatsSchema_5185890.bin.")
-    stats_node = _find_kv_entry(root_entries[0].children, "stats", KV_MAP)
-    if stats_node is None:
-        raise ValueError("В схеме достижений отсутствует узел stats.")
-    for entry in stats_node.children:
-        found = _entry_bits_children(entry)
-        if found is not None:
-            return found
-    raise ValueError("В схеме достижений отсутствует блок bits.")
-
-
-def _resolve_bit_achievement(
-    bit_node: RawKvEntry,
-    by_id: dict[str, AchievementDef],
-    by_bit: dict[str, AchievementDef],
-) -> AchievementDef | None:
-    name_node = _find_kv_entry(bit_node.children, "name", KV_STR)
-    ach_id = name_node.raw_bytes.decode("utf-8", "ignore") if name_node is not None else ""
-    return by_id.get(ach_id) or by_bit.get(bit_node.key)
-
-
-def _apply_achievement_to_bit_node(
-    bit_node: RawKvEntry,
-    by_id: dict[str, AchievementDef],
-    by_bit: dict[str, AchievementDef],
-) -> bool:
-    if bit_node.tag != KV_MAP:
-        return False
-    ach = _resolve_bit_achievement(bit_node, by_id, by_bit)
-    display = _find_kv_entry(bit_node.children, "display", KV_MAP) if ach else None
-    if ach is None or display is None:
-        return False
-    name_map = _find_kv_entry(display.children, "name", KV_MAP)
-    desc_map = _find_kv_entry(display.children, "desc", KV_MAP)
-    if name_map is None or desc_map is None:
-        return False
-    _upsert_kv_string(name_map.children, "russian", ach.name_ru)
-    _upsert_kv_string(desc_map.children, "russian", ach.desc_ru)
-    return True
-
-
-def patch_achievement_schema_bytes(
-    raw_schema: bytes, achievements: Sequence[AchievementDef]
-) -> tuple[bytes, int]:
-    entries, has_end = parse_raw_kv(raw_schema)
-    bits = _locate_achievement_bits(entries)
-    by_id = {a.ach_id: a for a in achievements if a.ach_id}
-    by_bit = {str(a.bit): a for a in achievements}
-    count = sum(1 for node in bits if _apply_achievement_to_bit_node(node, by_id, by_bit))
-    return serialize_raw_kv(entries, has_end), count
-
-
-def _parse_times_map(group1: RawKvEntry) -> dict[int, int]:
-    times_node = _find_kv_entry(group1.children, "AchievementTimes", KV_MAP)
-    if times_node is None:
-        return {}
-    return {
-        int(child.key): struct.unpack("<I", child.raw_bytes)[0]
-        for child in times_node.children
-        if child.tag == KV_INT32 and child.key.isdigit()
-    }
-
-
-def _extract_group1_stats(root_entries: Sequence[RawKvEntry]) -> tuple[int, dict[int, int]]:
-    cache = _find_kv_entry(root_entries, "cache", KV_MAP)
-    if cache is None and len(root_entries) == 1 and root_entries[0].tag == KV_MAP:
-        cache = root_entries[0]
-    group1 = _find_kv_entry(cache.children, "1", KV_MAP) if cache is not None else None
-    if group1 is None:
-        return 0, {}
-    data_node = _find_kv_entry(group1.children, "data", KV_INT32)
-    bitmask = struct.unpack("<I", data_node.raw_bytes)[0] if data_node is not None else 0
-    return bitmask, _parse_times_map(group1)
-
-
-def _parse_single_stats_file(path: Path, total_count: int) -> UserProfileProgress | None:
-    try:
-        entries, _ = parse_raw_kv(path.read_bytes())
-        bitmask, times = _extract_group1_stats(entries)
-        mtime = path.stat().st_mtime
-    except Exception:
-        return None
-    limit = total_count if total_count > 0 else 14
-    unlocked = sum(1 for b in range(limit) if (bitmask >> b) & 1)
-    return UserProfileProgress(
-        path=path,
-        mtime=mtime,
-        bitmask=bitmask,
-        unlock_times=times,
-        unlocked_count=unlocked,
-    )
-
-
-def load_user_profiles(steam_dir: Path | None, total_count: int = 14) -> list[UserProfileProgress]:
-    stats_dir = resolve_stats_dir(steam_dir)
-    if stats_dir is None or not stats_dir.is_dir():
-        return []
-    candidates = [
-        p for p in stats_dir.iterdir() if p.is_file() and STATS_FILE_PATTERN.match(p.name)
-    ]
-    candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
-    profiles = [_parse_single_stats_file(p, total_count) for p in candidates]
-    return [p for p in profiles if p is not None]
 
 
 def _is_lang_comment_or_raw(line: str) -> bool:
@@ -990,44 +702,6 @@ def _patch_settings_step(
     log("В настройках steam_cloud/settings.ini включён русский язык (остальные параметры сохранены).")
 
 
-def _patch_steam_schema_step(
-    payload: PayloadBundle,
-    steam_dir: Path | None,
-    backup_root: Path,
-    prev_manifest: BackupManifest | None,
-    next_manifest: BackupManifest,
-    log: Callable[[str], None],
-) -> None:
-    stats_dir = resolve_stats_dir(steam_dir)
-    schema_path = (stats_dir / SCHEMA_FILE_NAME) if stats_dir is not None else None
-    if schema_path is None or not schema_path.is_file():
-        log("Примечание: кэш UserGameStatsSchema_5185890.bin пока не создан клиентом Steam.")
-        return
-    backup_rel = f"steam_stats/{SCHEMA_FILE_NAME}"
-    rec = _backup_live_file(
-        schema_path,
-        backup_root / backup_rel,
-        _find_prev_record(prev_manifest, "steam_schema", SCHEMA_FILE_NAME),
-        "steam_schema",
-        SCHEMA_FILE_NAME,
-        backup_rel,
-    )
-    clean_bytes = (backup_root / backup_rel).read_bytes()
-    patched, count = patch_achievement_schema_bytes(clean_bytes, payload.achievements)
-    try:
-        write_bytes_atomic(schema_path, patched)
-    except PermissionError:
-        log(
-            f"Примечание: нет прав доступа на запись {schema_path}. "
-            "Текст и шрифты игры установлены полностью."
-        )
-        return
-    rec.patched_sha256 = sha256_hex(patched)
-    next_manifest.steam_schema_source_path = str(schema_path)
-    next_manifest.files.append(rec)
-    log(f"Обновлена схема достижений Steam: {count} из {len(payload.achievements)} на русском языке.")
-
-
 def install_russifier(
     payload: PayloadBundle,
     game_dir: Path,
@@ -1056,7 +730,9 @@ def install_russifier(
         _patch_game_lang_and_fonts(payload, game_dir, backup_root, prev, log)
     )
     _patch_settings_step(game_dir, backup_root, prev, next_manifest, log)
-    _patch_steam_schema_step(payload, steam_dir, backup_root, prev, next_manifest, log)
+    if prev:
+        next_manifest.files.extend(r for r in prev.files if r.target_kind == "steam_schema")
+        next_manifest.steam_schema_source_path = prev.steam_schema_source_path
     save_backup_manifest(manifest_path, next_manifest)
     log("Готово: Русификатор установлен.")
 
@@ -1089,28 +765,14 @@ def _restore_schema_record(
     log: Callable[[str], None],
 ) -> None:
     schema_target = _resolve_schema_restore_target(steam_dir, manifest)
-    backup_schema = backup_root / rec.backup_rel_path
+    backup_schema = backup_root / _normalize_rel_slashes(rec.backup_rel_path)
     if schema_target is None or not backup_schema.is_file():
         return
     try:
         write_bytes_atomic(schema_target, backup_schema.read_bytes())
         log("Восстановлена оригинальная схема достижений Steam.")
     except PermissionError:
-        log(f"Примечание: нет прав доступа для возврата {schema_target}.")
-
-
-def _restore_manifest_record(
-    rec: BackupFileItem,
-    game_dir: Path,
-    backup_root: Path,
-    steam_dir: Path | None,
-    manifest: BackupManifest,
-    log: Callable[[str], None],
-) -> None:
-    if rec.target_kind == "game":
-        _restore_game_record(rec, game_dir, backup_root)
-    elif rec.target_kind == "steam_schema":
-        _restore_schema_record(rec, backup_root, steam_dir, manifest, log)
+        raise PermissionError(f"Исходная копия для {schema_target} сохранена в {backup_root}.")
 
 
 def uninstall_russifier(
@@ -1131,7 +793,8 @@ def uninstall_russifier(
 
     manifest = load_backup_manifest(manifest_path)
     for rec in manifest.files:
-        _restore_manifest_record(rec, game_dir, backup_root, steam_dir, manifest, log)
+        if rec.target_kind == "game":
+            _restore_game_record(rec, game_dir, backup_root)
 
     settings_path = game_dir / "steam_cloud" / "settings.ini"
     if manifest.settings_existed and manifest.original_language_line and settings_path.is_file():
@@ -1144,37 +807,11 @@ def uninstall_russifier(
     for opt_font in OPTIONAL_FONTS:
         (game_dir / opt_font).unlink(missing_ok=True)
 
+    for rec in manifest.files:
+        if rec.target_kind == "steam_schema":
+            _restore_schema_record(rec, backup_root, steam_dir, manifest, log)
     shutil.rmtree(backup_root)
     log("Готово: Оригинальные файлы игры полностью восстановлены.")
-
-
-def _format_ach_entry(
-    ach: AchievementDef, active: UserProfileProgress | None, tz: Any
-) -> tuple[str, str]:
-    is_open = active is not None and active.is_unlocked(ach.bit)
-    mark = "[✓]" if is_open else "[ ]"
-    status = active.format_status(ach.bit, tz=tz) if active is not None else "Не получено"
-    return f"{mark} {ach.name_ru} ({status})", f"    {ach.desc_ru}"
-
-
-def format_achievements_report(
-    payload: PayloadBundle, steam_dir: Path | None, *, tz: Any = None
-) -> str:
-    profiles = load_user_profiles(steam_dir, len(payload.achievements))
-    active = profiles[0] if profiles else None
-    unlocked_cnt = active.unlocked_count if active is not None else 0
-    lines = [f"Достижения Zombies Aren't Real: {unlocked_cnt} / {len(payload.achievements)}", "=" * 56]
-    if active is None:
-        lines.append("Профиль статистики в кэше Steam пока не найден (показаны условия всех достижений).")
-    lines.append("")
-
-    ordered = sorted(
-        payload.achievements,
-        key=lambda a: (0 if (active and active.is_unlocked(a.bit)) else 1, a.bit),
-    )
-    for ach in ordered:
-        lines.extend(_format_ach_entry(ach, active, tz))
-    return "\n".join(lines) + "\n"
 
 
 def _format_cleanliness_line(label: str, game_dir: Path, subdir: str, suffix: str) -> str:
@@ -1186,14 +823,11 @@ def format_status_report(
     payload: PayloadBundle, game_dir: Path | None, steam_dir: Path | None
 ) -> tuple[str, int]:
     valid = is_valid_game_dir(game_dir)
-    profiles = load_user_profiles(steam_dir, len(payload.achievements))
-    unlocked = profiles[0].unlocked_count if profiles else 0
     lines = [
         f"GameDir: {game_dir if valid else 'NOT_FOUND'}",
         f"SteamDir: {steam_dir if steam_dir is not None else 'NOT_FOUND'}",
         f"Installed: {'true' if is_russifier_installed(game_dir) else 'false'}",
         f"BackupManifest: {'present' if has_valid_backup(game_dir) else 'absent'}",
-        f"AchievementsUnlocked: {unlocked}/{len(payload.achievements)}",
     ]
     if valid and game_dir is not None:
         lines.append(_format_cleanliness_line("CampaignFilesClean", game_dir, "campaigns", ".cmp"))
@@ -1374,7 +1008,7 @@ def run_gui_menu(
     steam_dir: Path | None,
     gui: GuiBackend,
 ) -> int:
-    title = "Zombies Aren't Real - Русификатор v1.1"
+    title = "Zombies Aren't Real - Русификатор v1.2"
     cur_game, cur_steam = game_dir, steam_dir
     while True:
         status_text = (
@@ -1473,7 +1107,7 @@ def run_terminal_menu(
         valid = is_valid_game_dir(cur_game)
         state_lbl = ("Установлен" if is_russifier_installed(cur_game) else "Не установлен") if valid else "укажите папку игры"
         stdout.write(
-            f"\n=== Zombies Aren't Real - Русификатор v1.1 (Steam Deck / Linux) ===\n"
+            f"\n=== Zombies Aren't Real - Русификатор v1.2 (Steam Deck / Linux) ===\n"
             f"Папка игры: {cur_game if valid else 'не найдена'}\n"
             f"Состояние:  {state_lbl}\n"
             f"Boosty:     {BOOSTY_URL}\n"
@@ -1497,7 +1131,7 @@ def run_terminal_menu(
 def _build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="install-steamdeck.sh",
-        description="Русификатор текста, шрифтов и достижений для Zombies Aren't Real (Steam Deck / Linux)",
+        description="Русификатор текста и шрифтов для Zombies Aren't Real (Steam Deck / Linux)",
     )
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--install", action="store_true", help="Установить русификатор")
@@ -1505,7 +1139,6 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         "--uninstall", "--restore", dest="uninstall", action="store_true", help="Вернуть оригинал"
     )
     group.add_argument("--status", action="store_true", help="Показать состояние установки и пути")
-    group.add_argument("--achievements", action="store_true", help="Показать список достижений Steam")
     parser.add_argument("--game-dir", type=Path, default=None, help="Путь к папке Zombies-Arent-Real")
     parser.add_argument("--steam-dir", type=Path, default=None, help="Путь к папке клиента Steam")
     parser.add_argument("--payload", type=Path, default=None, help="Путь к ресурсу или Setup.exe")
@@ -1580,9 +1213,6 @@ def _dispatch_cli_mode(
         )
         stdout.write(report)
         return code
-    if args.achievements:
-        stdout.write(format_achievements_report(payload, steam_dir))
-        return 0
     if args.install or args.uninstall:
         return _run_cli_mutation(
             bool(args.install), args.game_dir, payload, steam_dir, script_dir, stdout
