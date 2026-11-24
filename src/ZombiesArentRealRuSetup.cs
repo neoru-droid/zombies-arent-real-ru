@@ -21,17 +21,17 @@ using System.Web.Script.Serialization;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
-[assembly: AssemblyTitle("Zombies Aren't Real — Русификатор")]
+[assembly: AssemblyTitle("Zombies Aren't Real - Русификатор")]
 [assembly: AssemblyDescription("Установщик русификатора текста и шрифтов для Zombies Aren't Real")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("neoru-droid")]
-[assembly: AssemblyProduct("Zombies Aren't Real — Русификатор")]
+[assembly: AssemblyProduct("Zombies Aren't Real - Русификатор")]
 [assembly: AssemblyCopyright("Copyright (c) 2026 neoru-droid")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]
-[assembly: AssemblyVersion("1.2.0.0")]
-[assembly: AssemblyFileVersion("1.2.0.0")]
+[assembly: AssemblyVersion("1.3.0.0")]
+[assembly: AssemblyFileVersion("1.3.0.0")]
 
 namespace ZombiesArentRealRuSetup
 {
@@ -264,7 +264,7 @@ namespace ZombiesArentRealRuSetup
 
         private static void PrintCliHelp()
         {
-            Console.WriteLine("Zombies Aren't Real — Русификатор v1.2 (neoru-droid)");
+            Console.WriteLine("Zombies Aren't Real - Русификатор v1.3 (neoru-droid)");
             Console.WriteLine();
             Console.WriteLine("Использование:");
             Console.WriteLine("  ZombiesArentReal-RU-Setup.exe                        Графическое окно установщика");
@@ -2944,7 +2944,7 @@ namespace ZombiesArentRealRuSetup
             StartPosition = FormStartPosition.CenterScreen;
             BackColor = TacticalTheme.BgDeep;
             ForeColor = TacticalTheme.TextPrimary;
-            Text = "Zombies Aren't Real — Русификатор v1.2";
+            Text = "Zombies Aren't Real - Русификатор v1.3";
             ClientSize = new Size(S(728), S(414));
 
             _winIcon = TacticalTheme.CreateWindowIcon();
@@ -3471,7 +3471,7 @@ namespace ZombiesArentRealRuSetup
 
             TextRenderer.DrawText(
                 g,
-                "Текст и шрифты для версии игры 0.43.1",
+                "Текст и шрифты для версии игры 0.44.0",
                 _fontSub,
                 new Point(textX, _headerRect.Y + S(46)),
                 TacticalTheme.TextSecondary,
@@ -3545,7 +3545,7 @@ namespace ZombiesArentRealRuSetup
             Rectangle leftFooter = new Rectangle(S(22), S(372), S(260), S(28));
             TextRenderer.DrawText(
                 g,
-                "v1.2 · neoru-droid",
+                "v1.3 · neoru-droid",
                 _fontSmall,
                 leftFooter,
                 TacticalTheme.TextDim,

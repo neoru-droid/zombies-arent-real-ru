@@ -170,7 +170,7 @@ def _load_payload_from_data_dir(data_dir: Path) -> PayloadBundle | None:
         return None
     return _bundle_from_dict(
         {
-            "version": "1.2.0",
+            "version": "1.3.0",
             "app_id": TARGET_APP_ID,
             "lang": json.loads(lang_json.read_text(encoding="utf-8")),
             "fonts": fonts_b64,
@@ -1008,7 +1008,7 @@ def run_gui_menu(
     steam_dir: Path | None,
     gui: GuiBackend,
 ) -> int:
-    title = "Zombies Aren't Real - Русификатор v1.2"
+    title = "Zombies Aren't Real - Русификатор v1.3"
     cur_game, cur_steam = game_dir, steam_dir
     while True:
         status_text = (
@@ -1107,7 +1107,7 @@ def run_terminal_menu(
         valid = is_valid_game_dir(cur_game)
         state_lbl = ("Установлен" if is_russifier_installed(cur_game) else "Не установлен") if valid else "укажите папку игры"
         stdout.write(
-            f"\n=== Zombies Aren't Real - Русификатор v1.2 (Steam Deck / Linux) ===\n"
+            f"\n=== Zombies Aren't Real - Русификатор v1.3 (Steam Deck / Linux) ===\n"
             f"Папка игры: {cur_game if valid else 'не найдена'}\n"
             f"Состояние:  {state_lbl}\n"
             f"Boosty:     {BOOSTY_URL}\n"

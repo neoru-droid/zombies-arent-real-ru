@@ -1,13 +1,13 @@
-# Zombies Aren’t Real · Русификатор
+# Zombies Aren't Real - Русификатор
 
-Полный русский текст, кастомный пиксельный шрифт 8x8 и гладкий Tactical HUD в настройках экрана без обрезки подписей.
+Полный русский текст (`3 009` строк), кастомный пиксельный шрифт 8x8 и гладкий Tactical HUD в настройках экрана без обрезки подписей.
 
-- **[Скачать перевод v1.2 (ZIP)](https://github.com/neoru-droid/zombies-arent-real-ru/releases/download/v1.2.0/ZombiesArentReal-RU-v1.2.zip)** · [Как установить](#установка)
-- **[Единая страница релиза с мод-меню на Boosty (бесплатно, без регистрации)](https://boosty.to/cd_tixo/posts/0ec0506b-063f-4be2-a788-40ebe320add7)**
+- **[Полное издание 2-в-1 v1.3 (Русификатор + Мод-меню) на Boosty](https://boosty.to/cd_tixo/posts/0ec0506b-063f-4be2-a788-40ebe320add7)** *(рекомендуется - два модуля на выбор в одном установщике)*
+- **[Скачать базовый русификатор v1.3 (ZIP)](https://github.com/neoru-droid/zombies-arent-real-ru/releases/download/v1.3.0/ZombiesArentReal-RU-v1.3.zip)** · [Как установить](#установка)
 
-Проверено на патче 0.43.1 (сборка Steam `26692741`) для **Windows** и **Steam Deck / Linux**. Достижения Steam продолжают открываться как обычно, а кнопка удаления в любой момент возвращает чистую оригинальную игру.
+Проверено на патче 0.44.0 (сборка Steam `26799228`) для **Windows** и **Steam Deck / Linux**. Достижения Steam продолжают открываться как обычно, а кнопка удаления в любой момент возвращает чистую оригинальную игру.
 
-![Zombies Aren’t Real · Русификатор](docs/screenshots/cover_wide.png)
+![Zombies Aren't Real - Русификатор](docs/screenshots/cover_wide.png)
 
 ## Установка
 1. Закройте игру, распакуйте архив и запустите `ZombiesArentReal-RU-Setup.exe` -> **«Установить русификатор»**.
@@ -54,6 +54,7 @@
 </details>
 
 ## История обновлений
+- **[v1.3](https://github.com/neoru-droid/zombies-arent-real-ru/releases/tag/v1.3.0)** - обновление под патч `0.44.0` (сборка `26799228`): переведены 193 новые строки и обновлены 25 изменённых строк (коридоры эвакуации, подсказки удержания, новые кнопки сброса, Ганшип и правила кооператива).
 - **[v1.2](https://github.com/neoru-droid/zombies-arent-real-ru/releases/tag/v1.2.0)** - исправлены описания снаряжения и подсказка гарнизона. Установщик обновляет текст и шрифты.
 - **[v1.1](https://github.com/neoru-droid/zombies-arent-real-ru/releases/tag/v1.1.0)** - адаптация под патч игры `v0.43.1`, кнопка Boosty в установщике.
 - **[v1.0](https://github.com/neoru-droid/zombies-arent-real-ru/releases/tag/v1.0.0)** - первый релиз перевода текста, пиксельного шрифта `8x8` и `Tactical HUD`.
