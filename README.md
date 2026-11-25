@@ -1,6 +1,6 @@
 # Zombies Aren't Real - Русификатор
 
-Русский перевод `v1.3` (3 009 строк), пиксельный шрифт `8x8` и гладкий `Tactical HUD`, а также сборка 2-в-1 с мод-меню для **Zombies Aren't Real** (патч `0.44.0`, сборка Steam `26799228`, Windows и Steam Deck). Достижения в Steam не блокируются.
+Русский перевод `v1.3` (3 009 строк), пиксельный шрифт `8x8` и гладкий `Tactical HUD`, а также сборка 2-в-1 с мод-меню для **Zombies Aren't Real** (патч `0.44.0`, сборка Steam `26799228`, Windows и Steam Deck).
 
 ## Скачать
 - **[Сборка 2-в-1 (русификатор + мод-меню) и обновления на Boosty](https://boosty.to/cd_tixo/posts/0ec0506b-063f-4be2-a788-40ebe320add7?utm_source=github&utm_medium=readme&utm_campaign=zombies_arent_real)** *(два модуля на выбор в одном установщике)*
