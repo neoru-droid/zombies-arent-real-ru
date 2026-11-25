@@ -63,8 +63,8 @@
 
 <a id="support"></a>
 ## Поддержать
-- **[Каталог релизов на Boosty](https://boosty.to/cd_tixo/posts/2a55d7e9-0f53-4d93-9f66-280981158dec)** (все бесплатные выпуски и обновления)
-- **[Разовые чаевые через CloudTips (СБП / карта)](https://pay.cloudtips.ru/p/240b8760)**
+- **[Каталог релизов на Boosty](https://boosty.to/cd_tixo/posts/2a55d7e9-0f53-4d93-9f66-280981158dec)**
+- **[Каталог всех игр с поиском](https://neoru-droid.github.io/)**
 
 Перевод сделан с помощью нейросети и проверен в игре. Найдёте опечатку или косяк - пишите в [Issues](https://github.com/neoru-droid/zombies-arent-real-ru/issues), поправлю.
 
